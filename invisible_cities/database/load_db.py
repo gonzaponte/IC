@@ -152,24 +152,24 @@ def DataDetector():
     return DetectorGeo
 
 
-def TablePMT():
+def TablePMT(table_name="TablePMT"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = "select * from TablePMT;"
+    sql = "select * from {};".format(table_name)
     cursor.execute(sql)
     pitch = #TODO
     table = np.array(cursor.fetchall()).reshape(12, pitch, pitch)
     return pitch, np.moveaxis(table, 0, -1)
 
 
-def TableSiPM():
+def TableSiPM(table_name="TableSiPM"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = "select * from TableSiPM;"
+    sql = "select * from {};".format(table_name)
     cursor.execute(sql)
     pitch = #TODO
     table = np.array(cursor.fetchall()).reshape(1792, pitch, pitch)
