@@ -13,6 +13,10 @@ import invisible_cities.database.load_db as DB
 
 
 class LightTables:
+    """
+    Interface for accessing light detection probabilities
+    stored in tables.
+    """
     def __init__(self):
         self._load()
 
