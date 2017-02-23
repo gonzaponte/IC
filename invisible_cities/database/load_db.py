@@ -129,3 +129,24 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     noise = np.array(data).reshape(nsipms, nbins)
 
     return noise, noise_bins, baselines
+
+def DataDetector():
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql = "select * from DetectorGeo;"
+    cursor.execute(sql)
+    info = tmap(itemgetter(0), cursor.fetchall()))
+
+    class DetectorGeo:
+        xmin = info[0]
+        xmax = info[1]
+        ymin = info[2]
+        ymax = info[3]
+        zmin = info[4]
+        zmax = info[5]
+        rmin = 0.
+        rmax = info[6]
+
+    return DetectorGeo
