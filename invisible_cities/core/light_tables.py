@@ -1,4 +1,8 @@
-"""Defines a class for accessing light detection probabilities."""
+"""
+Defines a class for accessing light detection probabilities.
+
+GML Feb 2017
+"""
 
 from __future__ import print_function, division, absolute_import
 
@@ -23,6 +27,6 @@ class LightTables:
         return self._sipm[xbin][ybin]
 
     def _load(self):
-        self.xmin, self.xmax, self.ymin, self.ymax = DB.load_detector_dims()
-        self.pmt_pitch,  self._pmt  = DB.load_light_table_pmt()
-        self.sipm_pitch, self._sipm = DB.load_light_table_sipm()
+        self.xmin, self.xmax, self.ymin, self.ymax = DB.DataDetector()
+        self. pmt_pitch, self._pmt  = DB.TablePMT()
+        self.sipm_pitch, self._sipm = DB.TableSiPM()
