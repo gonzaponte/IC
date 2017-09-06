@@ -129,3 +129,46 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     noise = np.array(data).reshape(nsipms, nbins)
 
     return noise, noise_bins, baselines
+
+
+def PMT_light_table(info_table_name = "InfoTablePMT",
+                         table_name = "TablePMT"    ):
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql = f"select * from {info_table_name};"
+    cursor.execute(sql)
+    (number_of_pmts,
+     table_pitch,
+     number_of_points_x,
+     number_of_points_y) = cursor.fetchall()
+
+    sql = f"select * from {table_name};"
+    cursor.execute(sql)
+    table = np.array(cursor.fetchall()).reshape(number_of_pmts,
+                                                number_of_points_x,
+                                                number_of_points_y)
+    return table_pitch, np.moveaxis(table, 0, -1)
+
+
+def SiPM_light_table(info_table_name="InfoTableSiPM",
+                          table_name="TableSiPM"    ):
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql = f"select * from {info_table_name};"
+    cursor.execute(sql)
+    (number_of_sipms,
+     table_pitch,
+     number_of_points_x,
+     number_of_points_y) = cursor.fetchall()
+
+    sql = f"select * from {table_name};"
+    cursor.execute(sql)
+    table = np.array(cursor.fetchall()).reshape(number_of_sipms,
+                                                number_of_points_x,
+                                                number_of_points_y)
+
+    return table_pitch, np.moveaxis(table, 0, -1)
