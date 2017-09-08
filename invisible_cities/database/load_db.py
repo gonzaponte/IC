@@ -131,44 +131,46 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     return noise, noise_bins, baselines
 
 
-def PMT_light_table(info_table_name = "InfoTablePMT",
-                         table_name = "TablePMT"    ):
+def PMT_light_table(    position_table = "ELPointsPosition"
+                     probability_table = "ELProductionCathode"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = f"select * from {info_table_name};"
+    sql = f"select * from {position_table};"
     cursor.execute(sql)
-    (number_of_pmts,
-     table_pitch,
-     number_of_points_x,
-     number_of_points_y) = cursor.fetchall()
+    pos_ID, X, Y, _ = np.array(cursor.fetchall()).T
+    pitch = np.diff(x)[0]
 
-    sql = f"select * from {table_name};"
+    sql = f"select * order by PosID from {probability_table};"
     cursor.execute(sql)
-    table = np.array(cursor.fetchall()).reshape(number_of_pmts,
-                                                number_of_points_x,
-                                                number_of_points_y)
-    return table_pitch, np.moveaxis(table, 0, -1)
+    data     = np.array(cursor.fetchall()).T
+    posID    = data[1]
+    sensorID = data[2]
+    probs    = data[3:].sum(axis=0)
+    table = np.array(cursor.fetchall()).reshape(len(data[3:]),
+                                                len(X),
+                                                len(Y))
+
+    #The table is ordered as the points: 
+
+    return pitch, np.moveaxis(table, 0, -1)
 
 
-def SiPM_light_table(info_table_name="InfoTableSiPM",
-                          table_name="TableSiPM"    ):
+def SiPM_light_table(   position_table = "ELPointsPosition"
+                     probability_table = "ELProductionAnode"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = f"select * from {info_table_name};"
+    sql = f"select * from {position_table};"
     cursor.execute(sql)
-    (number_of_sipms,
-     table_pitch,
-     number_of_points_x,
-     number_of_points_y) = cursor.fetchall()
+    pos_ID, X, Y, Z = np.array(cursor.fetchall()).T
 
-    sql = f"select * from {table_name};"
+    sql = f"select * from {probability_table};"
     cursor.execute(sql)
     table = np.array(cursor.fetchall()).reshape(number_of_sipms,
                                                 number_of_points_x,
                                                 number_of_points_y)
 
-    return table_pitch, np.moveaxis(table, 0, -1)
+    return pitch, np.moveaxis(table, 0, -1)
