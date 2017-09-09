@@ -39,7 +39,9 @@ for name, attrs in (
         ('FitFunction'    , 'fn values errors chi2 pvalue'),
         ('TriggerParams'  , 'trigger_channels min_number_channels charge height width'),
         ('PeakData'       , 'charge height width'),
-        ('Measurement'    , 'value uncertainty')):
+        ('Measurement'    , 'value uncertainty'),
+        ('Sensor'         , 'ID  Q'),
+        ('SensorList'     , 'IDs Qs')):
     _add_namedtuple_in_this_module(name, attrs)
 
 # Leave nothing but the namedtuple types in the namespace of this module

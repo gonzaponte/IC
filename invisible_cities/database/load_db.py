@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from operator import itemgetter
 
+from .. evm.ic_containers import SensorList
 
 DATABASE_LOCATION =  os.environ['ICTDIR'] + '/invisible_cities/database/localdb.sqlite3'
 
@@ -131,46 +132,54 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     return noise, noise_bins, baselines
 
 
-def PMT_light_table(    position_table = "ELPointsPosition"
-                     probability_table = "ELProductionCathode"):
+def position_table(table_name = "ELPointsPosition"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
-    conn = sqlite3.connect(dbfile)
+    conn   = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = f"select * from {position_table};"
+    sql = "select posID, X, Y from {table_name};"
     cursor.execute(sql)
-    pos_ID, X, Y, _ = np.array(cursor.fetchall()).T
-    pitch = np.diff(x)[0]
+    pos_ID, X, Y = np.array(cursor.fetchall()).T
 
-    sql = f"select * order by PosID from {probability_table};"
+    x_pitch  = np.diff(X)[0]
+    y_pitch  = np.diff(Y)[0]
+    pos_dict = dict(zip(pos_ID, zip(X, Y)))
+    return pos_dict, x_pitch, y_pitch
+
+
+def PMT_light_table(table_name = "ELProductionCathode"):
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn   = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql      = "select * order by PosID from {table_name};"
     cursor.execute(sql)
     data     = np.array(cursor.fetchall()).T
-    posID    = data[1]
-    sensorID = data[2]
-    probs    = data[3:].sum(axis=0)
-    table = np.array(cursor.fetchall()).reshape(len(data[3:]),
-                                                len(X),
-                                                len(Y))
+    pos_ID   = data[1]
+    probs    = data[3:]
 
-    #The table is ordered as the points: 
-
-    return pitch, np.moveaxis(table, 0, -1)
+    prob_dict = {}
+    for i in np.unique(pos_ID):
+        where = pos_ID == i
+        prob_dict[i] = probs[where].sum(axis=0)
+    return prob_dict
 
 
-def SiPM_light_table(   position_table = "ELPointsPosition"
-                     probability_table = "ELProductionAnode"):
+def SiPM_light_table(table_name = "ELProductionAnode"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = f"select * from {position_table};"
+    sql   = "select * from {table_name};"
+    data  = np.array(cursor.fetchall()).T
     cursor.execute(sql)
-    pos_ID, X, Y, Z = np.array(cursor.fetchall()).T
+    pos_ID    = data[1]
+    sensor_ID = data[2]
+    probs     = data[3:]
 
-    sql = f"select * from {probability_table};"
-    cursor.execute(sql)
-    table = np.array(cursor.fetchall()).reshape(number_of_sipms,
-                                                number_of_points_x,
-                                                number_of_points_y)
-
-    return pitch, np.moveaxis(table, 0, -1)
+    prob_dict = {}
+    for i in np.unique(pos_ID):
+        where = pos_ID == i
+        prob_dict[i] = SensorList(sensor_ID[where],
+                                  probs    [where].sum(axis=0))
+    return prob_dict
