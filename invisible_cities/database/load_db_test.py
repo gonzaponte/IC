@@ -1,3 +1,5 @@
+import numpy as np
+
 from . import load_db as DB
 
 import sqlite3
@@ -97,6 +99,7 @@ def test_db(tmpdir_factory):
 
     return dbfile, sipm_noise
 
+
 def test_sipm_noise_order(test_db):
     #Read from DB
     dbfile = test_db[0]
@@ -111,3 +114,50 @@ def test_sipm_noise_order(test_db):
     np.testing.assert_allclose(noise,     noise_true)
     np.testing.assert_allclose(bins,      bins_true)
     np.testing.assert_allclose(baselines, baselines_true)
+
+
+def test_position_table():
+    _, x, y, z = DB.position_table()
+
+    x = np.sort(np.unique(x))
+    y = np.sort(np.unique(y))
+
+    pitch_x = np.diff(x)
+    pitch_y = np.diff(y)
+    pitch_z = np.diff(z)
+
+    assert np.all(pitch_x == pitch_x[0]) # fixed pitch
+    assert np.all(pitch_y == pitch_y[0]) # fixed pitch
+    assert np.all(pitch_z == 0         ) # fixed z
+
+
+def test_pmt_light_table():
+    data_pmt   = DB.pmt_light_table()
+#    pos_ID     = DB. position_table()[0].astype(int)
+    sens_ID    = DB.DataPMT(0).SensorID.values
+    n_pmt      = sens_ID.size
+
+#    pmt_pos_id  = np.unique(data_pmt[1 ].astype(int))
+    pmt_sens_id = np.unique(data_pmt[2 ].astype(int))
+    pmt_probs   =           data_pmt[3:]
+
+    assert data_pmt.shape[1] % n_pmt == 0        # all pmts are present for each point
+#    assert np.all(np.in1d(pmt_pos_id ,  pos_ID)) #  pos_ids are valid
+    assert np.all(np.in1d(pmt_sens_id, sens_ID)) # sens_ids are valid
+    assert np.all((pmt_probs >= 0   ) &
+                  (pmt_probs <= 5e-5))           # probs in expected range
+
+
+def test_sipm_light_table():
+    data_sipm  = DB.sipm_light_table()
+#    pos_ID     = DB.  position_table()[0].astype(int)
+    sens_ID    = DB.DataSiPM(0).SensorID.values
+
+#    sipm_pos_id  = np.unique(data_sipm[1 ].astype(int))
+    sipm_sens_id = np.unique(data_sipm[2 ].astype(int))
+    sipm_probs   =           data_sipm[3:]
+
+#    assert np.all(np.in1d(sipm_pos_id ,  pos_ID)) #  pos_ids are valid
+    assert np.all(np.in1d(sipm_sens_id, sens_ID)) # sens_ids are valid
+    assert np.all((sipm_probs >= 0   ) &
+                  (sipm_probs <= 2e-4))           # probs in expected range
