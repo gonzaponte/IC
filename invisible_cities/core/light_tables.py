@@ -2,30 +2,74 @@
 An useful class for accessing light detection probabilities.
 """
 
-import invisible_cities.database.load_db as DB
+import numpy as np
+
+from .. database import load_db as DB
+
+from .. evm.ic_containers import SensorList
 
 
 class LightTables:
     def __init__(self):
-        self._load()
+        pos_table  = DB.       pos_table()
+        pmt_table  = DB. pmt_light_table()
+        sipm_table = DB.sipm_light_table()
 
-    def PMT(self, x, y):
-        xbin = int((x - self.xmin) // self.pmt_pitch)
-        ybin = int((y - self.ymin) // self.pmt_pitch)
-        return self._pmt[xbin, ybin]
+        (self. pmt_dict,
+         self.sipm_dict) = self._create_probability_dicts(pos_table, pmt_table, sipm_table)
 
-    def SiPM(self, x, y):
-        xbin = int((x - self.xmin) // self.pmt_pitch)
-        ybin = int((y - self.ymin) // self.pmt_pitch)
-        return self._sipm[xbin, ybin]
+        (self.min_x, self.pitch_x, self.pos_x,
+         self.min_y, self.pitch_y, self.pos_y) = self._grid_info(pos_table)
 
-    def _load(self):
-        detector_geo = DB.DetectorGeo()
+    def PMT_probabilities(self, x, y):
+        return self.get_probability(x, y, self.pmt_dict)
 
-        self.xmin = detector_geo.XMIN[0]
-        self.xmax = detector_geo.XMAX[0]
-        self.ymin = detector_geo.YMIN[0]
-        self.ymax = detector_geo.YMAX[0]
+    def SiPM_probabilities(self, x, y):
+        return self.get_probability(x, y, self.sipm_dict)
 
-        self.pmt_pitch,  self._pmt  = DB. PMT_light_table()
-        self.sipm_pitch, self._sipm = DB.SiPM_light_table()
+    def get_probability(self, x, y, from_dict, build_default):
+        index_x = ((x - self.min_x) // self.pitch_x).astype(int)
+        index_y = ((y - self.min_y) // self.pitch_y).astype(int)
+
+        grid_point = (self.pos_x[index_x],
+                      self.pos_y[index_y])
+
+        if not grid_point in from_dict:
+            raise KeyError("Grid point not in table")
+        return from_dict[grid_point]
+
+    def _create_probability_dicts(self, pos_table, pmt_table, sipm_table):
+        pos_ID, X, Y, _ = pos_table
+        pos_dict        = dict(zip(pos_ID, zip(X, Y)))
+
+        _, pos_ID, sensor_ID, *probs = pmt_table
+        probs = np.stack(probs)
+
+        pmt_dict = {}
+        for i in np.unique(pos_ID):
+            where = pos_ID == i
+            order = np.argsort(sensor_ID[where])
+            pmt_dict[pos_dict[i]] = probs[where].sum(axis=0)[order]
+
+
+        _, pos_ID, sensor_ID, *probs = sipm_table
+        probs = np.stack(probs)
+
+        sipm_dict = {}
+        for i in np.unique(pos_ID):
+            where = pos_ID == i
+            sipm_dict[pos_dict[i]] = SensorList(sensor_ID[where],
+                                                probs    [where].sum(axis=0))
+
+        return pmt_dict, sipm_dict
+
+    def _grid_info(self, pos_table):
+        def extract_info(pos):
+            pos_array = np.unique(pos)
+            pos_array.sort()
+            min_value = pos_array[0]
+            pitch     = np.diff(pos_array)[0]
+            return min_value, pitch, pos_array
+
+        _, X, Y, _ = pos_table
+        return extract_info(X), extract_info(Y)
