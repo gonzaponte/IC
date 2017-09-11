@@ -4,7 +4,6 @@ import pandas as pd
 import os
 from operator import itemgetter
 
-from .. evm.ic_containers import SensorList
 
 DATABASE_LOCATION =  os.environ['ICTDIR'] + '/invisible_cities/database/localdb.sqlite3'
 
@@ -137,17 +136,13 @@ def position_table(table_name = "ELPointsPosition"):
     conn   = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
-    sql = "select posID, X, Y from {table_name};"
+    sql  = "select posID, X, Y from {table_name};"
     cursor.execute(sql)
-    pos_ID, X, Y = np.array(cursor.fetchall()).T
-
-    x_pitch  = np.diff(X)[0]
-    y_pitch  = np.diff(Y)[0]
-    pos_dict = dict(zip(pos_ID, zip(X, Y)))
-    return pos_dict, x_pitch, y_pitch
+    data = np.array(cursor.fetchall()).T
+    return data
 
 
-def PMT_light_table(table_name = "ELProductionCathode"):
+def pmt_light_table(table_name = "ELProductionCathode"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn   = sqlite3.connect(dbfile)
     cursor = conn.cursor()
@@ -155,31 +150,15 @@ def PMT_light_table(table_name = "ELProductionCathode"):
     sql      = "select * order by PosID from {table_name};"
     cursor.execute(sql)
     data     = np.array(cursor.fetchall()).T
-    pos_ID   = data[1]
-    probs    = data[3:]
-
-    prob_dict = {}
-    for i in np.unique(pos_ID):
-        where = pos_ID == i
-        prob_dict[i] = probs[where].sum(axis=0)
-    return prob_dict
+    return data
 
 
-def SiPM_light_table(table_name = "ELProductionAnode"):
+def sipm_light_table(table_name = "ELProductionAnode"):
     dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
     conn = sqlite3.connect(dbfile)
     cursor = conn.cursor()
 
     sql   = "select * from {table_name};"
-    data  = np.array(cursor.fetchall()).T
     cursor.execute(sql)
-    pos_ID    = data[1]
-    sensor_ID = data[2]
-    probs     = data[3:]
-
-    prob_dict = {}
-    for i in np.unique(pos_ID):
-        where = pos_ID == i
-        prob_dict[i] = SensorList(sensor_ID[where],
-                                  probs    [where].sum(axis=0))
-    return prob_dict
+    data  = np.array(cursor.fetchall()).T
+    return data
