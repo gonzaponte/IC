@@ -97,9 +97,51 @@ def loadDB(dbname='NEWDB'):
 );''')
 
 
-    tables = ['DetectorGeo','PmtBlr','ChannelGain','ChannelMapping','ChannelMask',
-          'PmtNoiseRms','ChannelPosition','SipmBaseline', 'SipmNoisePDF']
+    cursorSql3.execute('''CREATE TABLE IF NOT EXISTS `ELPointsPosition` (
+  `PosID` integer NOT NULL
+,  `X` float DEFAULT NULL
+,  `Y` float NOT NULL
+,  `Z` float NOT NULL
+);''')
 
+    cursorSql3.execute('''CREATE TABLE IF NOT EXISTS `ELProductionCathode` (
+  `NHits` integer NOT NULL
+,  `PosID` integer NOT NULL
+,  `SensorID` integer NOT NULL
+,  `Prob0` float NOT NULL
+,  `Prob1` float NOT NULL
+,  `Prob2` float NOT NULL
+,  `Prob3` float NOT NULL
+,  `Prob4` float NOT NULL
+,  `Prob5` float NOT NULL
+,  `Prob6` float NOT NULL
+,  `Prob7` float NOT NULL
+,  `Prob8` float NOT NULL
+,  `Prob9` float NOT NULL
+,  `Prob10` float NOT NULL
+,  `Prob11` float NOT NULL
+,  `Prob12` float NOT NULL
+,  `Prob13` float NOT NULL
+,  `Prob14` float NOT NULL
+,  `Prob15` float NOT NULL
+,  `Prob16` float NOT NULL
+,  `Prob17` float NOT NULL
+,  `Prob18` float NOT NULL
+,  `Prob19` float NOT NULL
+);''')
+
+    cursorSql3.execute('''CREATE TABLE IF NOT EXISTS `ELProductionAnode` (
+  `NHits` integer NOT NULL
+,  `PosID` integer DEFAULT NULL
+,  `SensorID` integer NOT NULL
+,  `Prob0` float NOT NULL
+,  `Prob1` float NOT NULL
+);''')
+
+
+    tables = ['DetectorGeo','PmtBlr','ChannelGain','ChannelMapping','ChannelMask',
+              'PmtNoiseRms','ChannelPosition','SipmBaseline', 'SipmNoisePDF',
+              'ELPointsPosition', 'ELProductionCathode', 'ELProductionAnode']
 
     # Copy all tables
     for table in tables:
