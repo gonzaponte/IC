@@ -129,3 +129,36 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     noise = np.array(data).reshape(nsipms, nbins)
 
     return noise, noise_bins, baselines
+
+
+def position_table():
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn   = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql  = "select * from ELPointsPosition;"
+    cursor.execute(sql)
+    data = np.array(cursor.fetchall()).T
+    return data
+
+
+def pmt_light_table():
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn   = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql      = "select * from ELProductionCathode;"
+    cursor.execute(sql)
+    data     = np.array(cursor.fetchall()).T
+    return data
+
+
+def sipm_light_table():
+    dbfile = os.environ['ICTDIR'] + DATABASE_LOCATION
+    conn = sqlite3.connect(dbfile)
+    cursor = conn.cursor()
+
+    sql   = "select * from ELProductionAnode;"
+    cursor.execute(sql)
+    data  = np.array(cursor.fetchall()).T
+    return data
