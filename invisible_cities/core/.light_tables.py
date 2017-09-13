@@ -6,6 +6,7 @@ import numpy as np
 
 from .. database import load_db as DB
 
+from invisible_cities.core.core_functions import timefunc
 from .. evm.ic_containers import SensorCollection
 
 
@@ -38,27 +39,26 @@ class LightTables:
             raise KeyError("Grid point not in table")
         return from_dict[grid_point]
 
+    @timefunc
     def _create_probability_dicts(self, pos_table, pmt_table, sipm_table):
         pos_ID, X, Y, _ = pos_table
         pos_dict        = dict(zip(pos_ID, zip(X, Y)))
 
-        _, pos_ID, sensor_ID, *probs = pmt_table
-        probs     = np.stack(probs)
+        _,  pmt_pos_ID,  pmt_sensor_ID, * pmt_probs =  pmt_table
+        _, sipm_pos_ID, sipm_sensor_ID, *sipm_probs = sipm_table
+        pmt_probs  = np.stack( pmt_probs)
+        sipm_probs = np.stack(sipm_probs)
 
-        pmt_dict = {}
-        for i in np.unique(pos_ID):
-            where = pos_ID == i
-            order = np.argsort(sensor_ID[where])
-            pmt_dict[pos_dict[i]] = probs[where].sum(axis=0)[order]
-
-        _, pos_ID, sensor_ID, *probs = sipm_table
-        probs = np.stack(probs)
-
+        pmt_dict  = {}
         sipm_dict = {}
-        for i in np.unique(pos_ID):
-            where = pos_ID == i
-            sipm_dict[pos_dict[i]] = SensorCollection(sensor_ID[where],
-                                                      probs    [where].sum(axis=0))
+        for i, xy in pos_dict.items():
+            where =  pmt_pos_ID == i
+            order = np.argsort(pmt_sensor_ID[where])
+            pmt_dict [xy] = pmt_probs[:, where].sum(axis=0)[order]
+
+            where = sipm_pos_ID == i
+            sipm_dict[xy] = SensorCollection(sipm_sensor_ID[   where],
+                                             sipm_probs    [:, where].sum(axis=0))
 
         return pmt_dict, sipm_dict
 
