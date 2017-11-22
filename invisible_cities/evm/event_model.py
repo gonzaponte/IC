@@ -353,7 +353,7 @@ class HitCollection(Event):
 
 class KrEvent(Event):
     """Represents a point-like (Krypton) event."""
-    def __init__(self, event_number, event_time):
+    def __init__(self, event_number, event_time, with_ipmt=False):
         Event.__init__(self, event_number, event_time)
         self.nS1   = -1 # number of S1 in the event
         self.S1w   = [] # widht
@@ -365,6 +365,7 @@ class KrEvent(Event):
         self.S2w   = []
         self.S2h   = []
         self.S2e   = []
+        self.PMTe  = []
         self.S2q   = [] # Charge in the S2Si
         self.S2t   = [] # time
 
@@ -378,6 +379,8 @@ class KrEvent(Event):
         self.Phi   = []
         self.Xrms  = [] # error in position
         self.Yrms  = []
+
+        self.with_ipmt = with_ipmt
 
     def store(self, table):
         row = table.row
@@ -397,6 +400,8 @@ class KrEvent(Event):
             row["S2e"  ] = self.S2e  [i]
             row["S2q"  ] = self.S2q  [i]
             row["S2t"  ] = self.S2t  [i]
+            if self.with_ipmt:
+                row["PMTe"] = self.PMTe[i]
 
             row["Nsipm"] = self.Nsipm[i]
             row["DT"   ] = self.DT   [i]
