@@ -146,9 +146,13 @@ class KrTable(tb.IsDescription):
     X     = tb.Float64Col(pos=17)
     Y     = tb.Float64Col(pos=18)
     R     = tb.Float64Col(pos=19)
-    Phi   = tb.Float64Col(pos=10)
+    Phi   = tb.Float64Col(pos=20)
     Xrms  = tb.Float64Col(pos=21)
     Yrms  = tb.Float64Col(pos=22)
+
+
+class KrIpmtTable(KrTable):
+    PMTe  = tb.Float64Col(pos=23, shape=12) # Number of PMTs should not be hard-wired!!!
 
 
 class XYfactors(tb.IsDescription):
