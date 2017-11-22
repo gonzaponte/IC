@@ -764,11 +764,12 @@ class PCity(City):
 class KrCity(PCity):
     """A city that read pmaps and computes/writes a KrEvent"""
 
-    parameters = tuple("lm_radius new_lm_radius msipm qlm qthr".split())
+    parameters = tuple("store_ipmt lm_radius new_lm_radius msipm qlm qthr".split())
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self.cnt.init(n_events_more_than_1_cluster = 0)
+        self.store_ipmt = self.conf.store_ipmt
 
     def compute_xy_position(self, s2si, peak_no):
         """
