@@ -827,11 +827,10 @@ class KrCity(PCity):
         evt_number = pmapVectors.events
         evt_time   = pmapVectors.timestamps
         s1         = pmapVectors.s1
-        s2         = pmapVectors.s2
         s2si       = pmapVectors.s2si
+        s2_pmt     = pmapVectors.s2_pmt
 
-        evt       = KrEvent(evt_number, evt_time * 1e-3)
-
+        evt     = KrEvent(evt_number, evt_time * 1e-3, with_ipmt=self.store_ipmt)
         evt.nS1 = 0
         for peak_no, passed in filter_output.s1_peaks.items():
             if not passed: continue
@@ -853,6 +852,13 @@ class KrCity(PCity):
             evt.S2h.append(peak.height)
             evt.S2e.append(peak.total_energy)
             evt.S2t.append(peak.tpeak)
+
+            if self.store_ipmt:
+                pmt_energies = np.zeros(len(self.DataPMT), dtype=np.float64)
+                for i, is_active in zip(self.DataPMT.index, self.DataPMT.Active):
+                    if not is_active: continue
+                    pmt_energies[i] = s2_pmt.pmt_total_energy_in_peak(peak_no, i)
+                evt.PMTe.append(pmt_energies)
 
             try:
                 clusters = self.compute_xy_position(s2si, peak_no)
