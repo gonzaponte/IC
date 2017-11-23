@@ -669,12 +669,15 @@ class PCity(City):
         """
 
         write = self.writers
-        event_numbers= pmapVectors.events
-        timestamps = pmapVectors.timestamps
-        s1_dict = pmapVectors.s1
-        s2_dict = pmapVectors.s2
-        s2si_dict = pmapVectors.s2si
-        mc_tracks = pmapVectors.mc
+
+        event_numbers = pmapVectors.events
+        timestamps    = pmapVectors.timestamps
+        s1_dict       = pmapVectors.s1
+        s2_dict       = pmapVectors.s2
+        s1_pmt_dict   = pmapVectors.s1_pmt
+        s2_pmt_dict   = pmapVectors.s2_pmt
+        s2si_dict     = pmapVectors.s2si
+        mc_tracks     = pmapVectors.mc
 
         for evt_number, evt_time in zip(event_numbers, timestamps):
             self.conditional_print(self.cnt.n_events_tot, self.cnt.n_events_selected)
@@ -689,6 +692,11 @@ class PCity(City):
                                                       s2_dict,
                                                       s2si_dict,
                                                       evt_number)
+
+            s1_pmt, s2_pmt, _ = self. get_pmaps_from_dicts(s1_pmt_dict,
+                                                           s2_pmt_dict,
+                                                           {},
+                                                           evt_number)
             # filtering
             filter_output = self.filter_event(s1, s2, s2si)
             if not filter_output.passed:
@@ -698,6 +706,7 @@ class PCity(City):
 
             # create DST event & write to file
             pmapVectors = PmapVectors(s1=s1, s2=s2, s2si=s2si,
+                                      s1_pmt=s1_pmt, s2_pmt=s2_pmt,
                                       events=evt_number,
                                       timestamps=evt_time,
                                       mc=None)
@@ -714,12 +723,16 @@ class PCity(City):
         3. call event_loop
         """
 
+        s1_pmt = None
+        s2_pmt = None
         for filename in self.input_files:
             if self.event_range_finished(): break
             print("Opening {filename}".format(**locals()), end="...\n")
 
             try:
                 s1_dict, s2_dict, s2si_dict = self.get_pmaps_dicts(filename)
+                if self.load_ipmt:
+                    s1_pmt, s2_pmt = self.get_ipmt_pmaps_dicts(filename)
             except (ValueError, tb.exceptions.NoSuchNodeError):
                 print("Empty file. Skipping.")
                 continue
@@ -738,6 +751,8 @@ class PCity(City):
                 pmapVectors               = PmapVectors(s1         = s1_dict,
                                                         s2         = s2_dict,
                                                         s2si       = s2si_dict,
+                                                        s1_pmt     = s1_pmt,
+                                                        s2_pmt     = s2_pmt,
                                                         events     = event_numbers,
                                                         timestamps = timestamps,
                                                         mc         = mc_tracks)
