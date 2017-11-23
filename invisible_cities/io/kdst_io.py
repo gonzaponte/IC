@@ -1,13 +1,14 @@
 from .  table_io import make_table
 from .. evm.nh5  import KrTable
+from .. evm.nh5  import KrIpmtTable
 from .. evm.nh5  import XYfactors
 
 
-def kr_writer(hdf5_file, *, compression='ZLIB4'):
+def kr_writer(hdf5_file, *, with_ipmt=False, compression='ZLIB4'):
     kr_table = make_table(hdf5_file,
                           group       = 'DST',
                           name        = 'Events',
-                          fformat     = KrTable,
+                          fformat     = KrIpmtTable if with_ipmt else KrTable,
                           description = 'KDST Events',
                           compression = compression)
     # Mark column to index after populating table
