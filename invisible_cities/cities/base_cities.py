@@ -366,6 +366,10 @@ class City:
         return pio.load_pmaps(filename)
 
     @staticmethod
+    def get_ipmt_pmaps_dicts(filename):
+        return pio.load_ipmt_pmaps(filename)
+
+    @staticmethod
     def get_pmaps_from_dicts(s1_dict, s2_dict, s2si_dict, evt_number):
         return pio.s1_s2_si_from_pmaps(s1_dict, s2_dict, s2si_dict, evt_number)
 
