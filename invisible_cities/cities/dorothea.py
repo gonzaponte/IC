@@ -18,7 +18,7 @@ class Dorothea(KrCity):
         super().__init__(**kwds)
 
     def get_writers(self, h5out):
-        return Namespace(dst = kr_writer(h5out),
+        return Namespace(dst = kr_writer(h5out, with_ipmt = self.store_ipmt),
                          mc  = self.get_mc_track_writer(h5out))
 
     def create_dst_event(self, pmapVectors, filter_output):
