@@ -148,10 +148,21 @@ def pipe(*pieces):
             return pipe(*pieces, downstream)
         return pipe_awaiting_sink
 
+
+def join2(binary_op):
+    @coroutine
+    def join2_loop(target):
+        with closing(target):
+            while True:
+                one = yield
+                two = yield
+                target.send(binary_op(one, two))
+    return join2_loop
+
+
 # TODO:
 # + sum
 # + dispatch
-# + merge
 # + eliminate finally-boilerplate from RESULT (with contextlib.contextmanager?)
 # + graph structure DSL (mostly done: pipe, fork, branch (dispatch))
 # + network visualization

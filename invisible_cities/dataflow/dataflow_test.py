@@ -1,3 +1,5 @@
+# TODO: write test for starmap
+
 import dataflow as df
 
 from pytest import mark
@@ -380,6 +382,44 @@ def test_reuse_terminated_pipes():
         return [ x for pair in zip(a,b) for x in pair ]
 
     assert collected_by_sinks == intercalate(route1, route2)
+
+
+def test_join2():
+
+    # The previous example ends up joining two branches into a single
+    # pipe. join2 provides a higher-level tool for joining two
+    # streams. It accepts a binary function which is to be used to
+    # combine the two streams into a single one, and returns a factory
+    # of stream joiners which needs to be called with the pipe that
+    # follows the join point.
+
+    # NB: The components made by join2 have no idea where which stream
+    # the inputs come from; they simply assume that they receive
+    # inputs alternatively first from one stream, then the other. If
+    # the input streams are not synchronized (or if the joiner is
+    # connected to a single stream, or to more than two) the joiner
+    # will continue to assume that inputs arrive alternately from two
+    # streams, regardless of the reality.
+
+    source = list(range(20,40))
+
+    collected = [];
+    sink = df.sink(collected.append)
+
+    double = df.map(lambda n:n*2)
+    add1   = df.map(lambda n:n+1)
+    add2   = df.map(lambda n:n+2)
+
+    make_equality_comparison_joiner_into = df.join2(lambda a,b: a==b)
+    join_equal = make_equality_comparison_joiner_into(sink)
+
+    join_fork = df.fork(df.pipe(add1, double, join_equal),
+                        df.pipe(double, add2, join_equal))
+
+    df.push(source = source,
+            pipe   = join_fork)
+
+    assert all(collected)
 
 
 @mark.xfail
