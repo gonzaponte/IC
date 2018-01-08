@@ -34,6 +34,14 @@ def map(op):
                 target.send(op((yield)))
     return map_loop
 
+def starmap(op):
+    @coroutine
+    def map_loop(target):
+        with closing(target):
+            while True:
+                target.send(op(*(yield)))
+    return map_loop
+
 def filter(predicate):
     @coroutine
     def filter_loop(target):
