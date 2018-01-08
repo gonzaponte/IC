@@ -1,3 +1,5 @@
+# TODO: implement and test implicit pipes in fork
+
 from collections import namedtuple
 from functools   import wraps
 from asyncio     import Future
