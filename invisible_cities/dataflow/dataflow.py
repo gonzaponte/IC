@@ -4,6 +4,7 @@ from collections import namedtuple
 from functools   import wraps
 from asyncio     import Future
 from contextlib  import contextmanager
+from operator    import attrgetter
 
 import functools
 
@@ -168,6 +169,10 @@ def join2(binary_op):
                 two = yield
                 target.send(binary_op(one, two))
     return join2_loop
+
+
+def pick(name):
+    return map(attrgetter(name))
 
 
 # TODO:

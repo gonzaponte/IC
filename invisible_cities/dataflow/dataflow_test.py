@@ -4,6 +4,8 @@ import dataflow as df
 
 from pytest import mark
 
+from collections import namedtuple
+
 
 def test_simplest_pipeline():
 
@@ -420,6 +422,24 @@ def test_join2():
             pipe   = join_fork)
 
     assert all(collected)
+
+
+def test_pick_attribute():
+
+    # 'pick' allows you to take the value of an attribute of any python
+    # object by indicating its name. It is a pipe component that catches
+    # a stream and provides another one with all the values of the attribute
+    # name. 'pick(name)' is equivalent to dataflow.map(attrgetter(name)).
+
+    X = namedtuple('X', 'a b c')  # a,b,c are attributes of X
+    the_source = (X(1,2,3), X(4,5,6), X(7,8,9))
+    result = []
+    the_sink = df.sink(result.append)
+
+    df.push(source  = the_source,
+            pipe    = df.pipe(df.pick('b'), the_sink))
+
+    assert result == [2, 5, 8]
 
 
 @mark.xfail
