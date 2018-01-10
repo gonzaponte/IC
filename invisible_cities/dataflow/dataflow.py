@@ -9,6 +9,7 @@ from operator    import itemgetter
 
 
 import functools
+import builtins
 
 @contextmanager
 def closing(target):
@@ -80,6 +81,7 @@ def branch(*pieces):
 
 @coroutine
 def fork(*targets):
+    targets = implicit_pipes(targets)
     try:
         while True:
             value = (yield)
@@ -186,6 +188,12 @@ def pick(choice):
     else:
         return map(attrgetter(choice))
 
+
+def implicit_pipes(seq):
+    return tuple(builtins.map(if_tuple_make_pipe, seq))
+
+def if_tuple_make_pipe(thing):
+    return pipe(*thing) if type(thing) is tuple else thing
 
 # TODO:
 # + sum
