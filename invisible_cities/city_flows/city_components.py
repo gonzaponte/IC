@@ -103,7 +103,7 @@ def sensor_data(path):
 
 
 @df.coroutine
-def make_writer_mc(h5out):
+def make_write_mc(h5out):
     write_mc = mc_track_writer(h5out)
     for event_number in count():
         mctrack = yield

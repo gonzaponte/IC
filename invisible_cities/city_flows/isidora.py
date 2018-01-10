@@ -22,7 +22,7 @@ from .  city_components import city
 from .  city_components import deconv_pmt
 from .  city_components import event_data_from_files
 from .  city_components import sensor_data
-from .  city_components import make_writer_mc
+from .  city_components import make_write_mc
 
 
 @city
@@ -40,20 +40,20 @@ def isidora(files_in, file_out, event_range, run_number, n_baseline,
     with tb.open_file(file_out, "w", filters = tbl.filters(compression)) as h5out:
 
         RWF = partial(rwf_writer, h5out, group_name='BLR')
-        writer_pmt   = sink(RWF(table_name='pmtcwf' , n_sensors=sd.NPMT , waveform_length=sd.PMTWL))
-        writer_sipm  = sink(RWF(table_name='sipmrwf', n_sensors=sd.NSIPM, waveform_length=sd.SIPMWL))
-        writer_event_info = starsink(run_and_event_writer(h5out))
+        write_pmt   = sink(RWF(table_name='pmtcwf' , n_sensors=sd.NPMT , waveform_length=sd.PMTWL))
+        write_sipm  = sink(RWF(table_name='sipmrwf', n_sensors=sd.NSIPM, waveform_length=sd.SIPMWL))
+        write_event_info = starsink(run_and_event_writer(h5out))
 
-        writer_mc = make_writer_mc(h5out)
+        write_mc = make_write_mc(h5out)
 
         event_count = df.count()
 
         return push(
             source = event_data_from_files(files_in),
             pipe   = pipe(#df.slice(*event_range),
-             fork((pick('pmt'       ), rwf_to_cwf, writer_pmt       ),
-                  (pick('sipm'      ),             writer_sipm      ),
-                  (pick('mc'        ),             writer_mc        ),
-                  (pick('event_info'),             writer_event_info),
+             fork((pick('pmt'       ), rwf_to_cwf, write_pmt       ),
+                  (pick('sipm'      ),             write_sipm      ),
+                  (pick('mc'        ),             write_mc        ),
+                  (pick('event_info'),             write_event_info),
                   event_count.sink)),
             result = (event_count.future,))
