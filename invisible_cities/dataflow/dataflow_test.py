@@ -442,6 +442,22 @@ def test_pick_attribute():
     assert result == [2, 5, 8]
 
 
+def test_pick_item():
+
+    # In this case, 'pick' provides a stream by taking the number of the item.
+    # 'pick(number)' is equivalent to dataflow.map(attrgetter(number))
+
+    the_source = ((1,2,3),(4,5,6),(7,8,9))
+    result = []
+    the_sink = df.sink(result.append)
+
+    df.push(source  = the_source,
+            pipe    = df.pipe(df.pick(1), the_sink))
+
+    assert result == [2, 5, 8]
+
+
+
 @mark.xfail
 def test_pipes_must_end_in_a_sink():
     raise NotImplementedError

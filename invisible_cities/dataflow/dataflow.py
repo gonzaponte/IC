@@ -5,6 +5,8 @@ from functools   import wraps
 from asyncio     import Future
 from contextlib  import contextmanager
 from operator    import attrgetter
+from operator    import itemgetter
+
 
 import functools
 
@@ -171,8 +173,11 @@ def join2(binary_op):
     return join2_loop
 
 
-def pick(name):
-    return map(attrgetter(name))
+def pick(choice):
+    if type(choice) is int:
+        return map(itemgetter(choice))
+    else:
+        return map(attrgetter(choice))
 
 
 # TODO:
