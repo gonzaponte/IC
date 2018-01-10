@@ -16,9 +16,8 @@ from pytest import fixture
 
 from .. dataflow import dataflow      as df
 from .. reco     import tbl_functions as tbl
-from .. database import load_db
 
-
+from .  city_components import deconv_pmt
 
 
 def count_events_in_file(path):
@@ -121,17 +120,7 @@ def rwfs_from_files(paths):
 
 def test_rwfs_in_multiple_files(input_files):
 
-    DataPMT    = load_db.DataPMT(run_number = 0)
-    pmt_active = np.nonzero(DataPMT.Active.values)[0].tolist()
-    coeff_c    = DataPMT.coeff_c  .values.astype(np.double)
-    coeff_blr  = DataPMT.coeff_blr.values.astype(np.double)
-
-    rwf_to_cwf = df.map(deconv_pmt(coeff_c               = coeff_c,
-                                   coeff_blr             = coeff_blr,
-                                   pmt_active            = pmt_active,
-                                   n_baseline            = 28000,
-                                   thr_trigger           =     5,
-                                   acum_discharge_length =  5000))
+    rwf_to_cwf = df.map(deconv_pmt(n_baseline = 28000))
 
     compare = df.join2(lambda CWF, BLR: np.mean([np.abs(pmt - cwf) for pmt, cwf in zip(BLR, CWF)]) < 1)
 

@@ -108,6 +108,13 @@ def sink(effect):
             effect((yield))
     return sink_loop()
 
+def starsink(effect):
+    @coroutine
+    def sink_loop():
+        while True:
+            effect(*(yield))
+    return sink_loop()
+
 def reduce(update, initial):
     @RESULT
     def reduce_loop(future):
