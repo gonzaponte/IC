@@ -147,14 +147,14 @@ def stop_when(predicate):
 
 class StopPipeline(Exception): pass
 
-def push(source, pipe, futures=()):
+def push(source, pipe, result=()):
     for item in source:
         try:
             pipe.send(item)
         except StopPipeline:
             break
     pipe.close()
-    return tuple(f.result() for f in futures)
+    return tuple(f.result() for f in result)
 
 def pipe(*pieces):
 

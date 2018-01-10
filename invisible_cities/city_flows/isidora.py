@@ -41,11 +41,11 @@ def isidora(files_in, file_out, event_range, run_number, n_baseline,
 
         event_count = df.count()
 
-        return df.push(source  = event_data_from_files(files_in),
-                       pipe    = df.pipe(#df.slice(*event_range),
+        return df.push(source = event_data_from_files(files_in),
+                       pipe   = df.pipe(#df.slice(*event_range),
                         df.fork(df.pipe(df.pick('pmt'       ), rwf_to_cwf, writer_pmt       ),
                                 df.pipe(df.pick('sipm'      ),             writer_sipm      ),
                                 df.pipe(df.pick('mc'        ),             writer_mc        ),
                                 df.pipe(df.pick('event_info'),             writer_event_info),
                                 event_count.sink)),
-                       futures = (event_count.future,))
+                       result = (event_count.future,))
