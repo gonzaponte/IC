@@ -1,5 +1,8 @@
 # TODO: implement and test implicit pipes in fork
 
+import functools
+import builtins
+
 from collections import namedtuple
 from functools   import wraps
 from asyncio     import Future
@@ -7,9 +10,8 @@ from contextlib  import contextmanager
 from operator    import attrgetter
 from operator    import itemgetter
 
+import itertools as it
 
-import functools
-import builtins
 
 @contextmanager
 def closing(target):
@@ -187,6 +189,30 @@ def pick(choice):
         return map(itemgetter(choice))
     else:
         return map(attrgetter(choice))
+
+
+def slice(*args, close_all=False):
+    spec = builtins.slice(*args)
+    start, stop, step = spec.start, spec.stop, spec.step
+    if start is not None and start <  0: raise ValueError('slice requires start >= 0')
+    if stop  is not None and stop  <  0: raise ValueError('slice requires stop >= 0')
+    if step  is not None and step  <= 0: raise ValueError('slice requires step > 0')
+
+    if start is None: start = 0
+    if step  is None: step  = 1
+    if stop  is None: stopper = it.count()
+    else            : stopper = range((stop - start + step - 1) // step)
+    @coroutine
+    def slice_loop(target):
+        with closing(target):
+            for _ in range(start)             : yield
+            for _ in stopper:
+                target.send((yield))
+                for _ in range(step - 1)      : yield
+            if close_all: raise StopPipeline
+            while True:
+                yield
+    return slice_loop
 
 
 def implicit_pipes(seq):
