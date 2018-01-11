@@ -50,7 +50,7 @@ def isidora(files_in, file_out, event_range, run_number, n_baseline,
 
         return push(
             source = event_data_from_files(files_in),
-            pipe   = pipe(#df.slice(*event_range),
+            pipe   = pipe(df.slice(*event_range),
              fork((pick('pmt'       ), rwf_to_cwf, write_pmt       ),
                   (pick('sipm'      ),             write_sipm      ),
                   (pick('mc'        ),             write_mc        ),
