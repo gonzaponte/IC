@@ -6,8 +6,8 @@ from pandas      import DataFrame
 from collections import namedtuple
 
 from . core.system_of_units_c import units
-from . io.new_pmaps_io        import load_pmaps_as_df
-from . io.new_pmaps_io        import load_pmaps
+from . io.pmaps_io            import load_pmaps_as_df
+from . io.pmaps_io            import load_pmaps
 from . io. dst_io             import load_dst
 from . io.hits_io             import load_hits
 from . io.hits_io             import load_hits_skipping_NN
