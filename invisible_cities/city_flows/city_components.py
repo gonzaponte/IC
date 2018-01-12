@@ -11,7 +11,10 @@ import tables as tb
 from .. dataflow          import dataflow      as df
 from .. evm.ic_containers import SensorData
 from .. evm.ic_containers import EventData
+from .. evm.ic_containers import CCwfs
 from .. reco              import tbl_functions as tbl
+from .. reco              import calib_sensors_functions as csf
+from .. reco              import peak_functions as pkf
 from .. database          import load_db
 from .. sierpe            import blr
 from .. io.mc_io          import mc_track_writer
@@ -78,7 +81,7 @@ def event_data_from_files(paths):
             # it needs to be given the WHOLE TABLE (rather than a
             # single event) at a time. THIS NEEDS TO BE IMPROVED.
 
-
+# TODO: consider caching database
 def deconv_pmt(n_baseline, run_number=0):
     DataPMT    = load_db.DataPMT(run_number = run_number)
     pmt_active = np.nonzero(DataPMT.Active.values)[0].tolist()
@@ -108,3 +111,59 @@ def make_write_mc(h5out):
     for event_number in count():
         mctrack = yield
         write_mc(mctrack, event_number)
+
+
+def calibrate_pmts(n_MAU, thr_MAU, run_number):
+    DataPMT    = load_db.DataPMT(run_number = run_number)
+    adc_to_pes = np.abs(DataPMT.adc_to_pes.values)
+
+    def calibrate_pmts(cwf):# -> CCwfs:
+        return csf.calibrate_pmts(cwf,
+                                  adc_to_pes = adc_to_pes,
+                                  n_MAU      = n_MAU,
+                                  thr_MAU    = thr_MAU)
+    return calibrate_pmts
+
+
+def calibrate_sipms(thr_sipm, n_mau_sipm, run_number):
+    DataSiPM   = load_db.DataSiPM(run_number)
+    adc_to_pes = np.abs(DataSiPM.adc_to_pes.values)
+
+    def calibrate_sipms(rwf):
+        return csf.calibrate_sipms(rwf,
+                                   thr_sipm   = thr_sipm,
+                                   n_mau_sipm = n_mau_sipm)
+
+    return calibrate_sipms
+
+
+def zero_suppress_wf_s1(thr_csum_s1):
+    def zs_s1(cwf_sum_mau):
+        return pkf.indices_and_wf_above_threshold(cwf_sum_mau, thr_csum_s1)
+    return zs_s1
+
+
+def zero_suppress_wf_s2(thr_csum_s2):
+    def zs_s2(cwf_sum):
+        return pkf.indices_and_wf_above_threshold(cwf_sum    , thr_csum_s2)
+    return zs_s2
+
+
+def check_wf_sum(wf):
+    return np.sum(wf) > 0
+
+
+def build_pmap(s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
+               s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2, thr_sipm_type,
+               run_number):
+    # TODO: fill dicts
+    s1_params = {}
+    s2_params = {}
+    DataPMT   = load_db.DataPMT(run_number)
+    pmt_ids   = DataPMT.SensorID[datapmt.Active.astype(bool)].values
+
+    def build_pmap(ccwf, s1_indx, s2_indx, sipmzs): # -> PMap
+        return pkf.get_pmap(ccwf, s1_indx, s2_indx, sipmzs,
+                            s1_params, s2_params, thr_sipm_s2, pmt_ids)
+
+    return build_pmap

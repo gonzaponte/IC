@@ -3,6 +3,8 @@ from enum import Enum
 import numpy        as np
 import scipy.signal as signal
 
+from .. evm.ic_containers import CCwfs
+
 
 class BlsMode(Enum):
     mean = 0
@@ -40,7 +42,7 @@ def calibrate_pmts(cwfs, adc_to_pes,
 
     cwf_sum     = np.sum(ccwfs    , axis=0)
     cwf_sum_mau = np.sum(ccwfs_mau, axis=0)
-    return ccwfs, ccwfs_mau, cwf_sum, cwf_sum_mau
+    return CCwfs(ccwfs, ccwfs_mau, cwf_sum, cwf_sum_mau)
 
 
 def calibrate_sipms(sipm_wfs, adc_to_pes, thr, n_MAU=100):
