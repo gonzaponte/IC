@@ -130,7 +130,6 @@ class Pmtgain(CalibratedCity):
                               h5out,
                               group_name  = 'HIST',
                               n_sensors   = len(self.pmt_active),
-                              n_bins      = len(bin_centres),
                               bin_centres = bin_centres)
 
         writers = Namespace(run_and_event = run_and_event_writer(h5out),

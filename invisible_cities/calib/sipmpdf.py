@@ -94,7 +94,6 @@ class Sipmpdf(CalibratedCity):
                               h5out,
                               group_name  = 'HIST',
                               n_sensors   = self.sp.NSIPM,
-                              n_bins      = len(bin_centres),
                               bin_centres = bin_centres)
 
         writers = Namespace(
