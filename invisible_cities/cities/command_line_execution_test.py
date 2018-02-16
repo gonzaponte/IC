@@ -27,3 +27,8 @@ def test_command_line_run(city, tmpdir_factory):
         # Ensure that stdout and stderr are visible when test fails
         print(e.stdout.decode())
         raise
+
+
+
+# TODO: Add tests to ensure only the number of required events are read,
+#       i.e. we pass close_all = True to slice(*event_range)

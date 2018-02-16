@@ -52,7 +52,7 @@ def isidora(files_in, file_out, compression, event_range, print_mod, run_number,
 
         return push(
             source = wf_from_files(files_in, WfType.rwf),
-            pipe   = pipe(fl.slice(*event_range),
+            pipe   = pipe(fl.slice(*event_range, close_all = True),
                           print_every(print_mod),
                           fork((rwf_to_cwf, write_pmt       ),
                                (            write_sipm      ),

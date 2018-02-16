@@ -59,7 +59,7 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
     event_count = fl.count()
 
     with tb.open_file(file_out, 'w', filters=tbl.filters(compression)) as h5out:
-        
+
         write_event_info    = run_and_event_writer(h5out)
         write_run_and_event = fl.sink(write_event_info, args=("run_number", "event_number", "timestamp"))
 
@@ -71,7 +71,7 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
 
         out = fl.push(
             source = wf_from_files(files_in, raw_data_type_),
-            pipe   = fl.pipe(fl.slice(*event_range),
+            pipe   = fl.pipe(fl.slice(*event_range, close_all = True),
                              print_every(print_mod),
                              make_mau_stream,
                              make_mean_stream,
@@ -94,8 +94,8 @@ def accumulate_and_write_sipms(h5out, shape):
     sipm_hist = np.zeros(shape, dtype=np.int)
     def accumulate_and_write_sipms(wfm):
         sipm_hist += bin_waveforms(wfm)
-        
-    
+
+
 
 # class Zemrude(CalibratedCity):
 #     """

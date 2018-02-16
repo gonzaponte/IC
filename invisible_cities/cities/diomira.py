@@ -52,7 +52,7 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
 
         return push(
             source = wf_from_files(files_in, WfType.mcrd),
-            pipe   = pipe(fl.slice(*event_range) ,
+            pipe   = pipe(fl.slice(*event_range, close_all = True) ,
                           event_count_in    .spy ,
                           print_every(print_mod) ,
                           simulate_pmt_response_ ,
