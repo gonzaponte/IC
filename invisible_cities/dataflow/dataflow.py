@@ -5,6 +5,7 @@
 # TODO: Add test for failure to close sideways in branch
 # TODO: test string_to_pick and its usage
 
+import time
 import builtins
 import functools
 import itertools as it
@@ -232,10 +233,27 @@ def count(future):
         future.set_result(count)
 
 
+# TODO: Add test
+@RESULT
+def clock(future):
+    try:
+        yield
+        t0 = time.time()
+        while True: yield
+    finally:
+        t1 = time.time()
+        future.set_result(t1 - t0)
+
 FutureSpy = namedtuple("FutureSpy", "future spy")
 
 def spy_count():
     pair = count()
+    return FutureSpy(future = pair.future, spy = branch(pair.sink))
+
+
+# TODO: Add test
+def spy_clock():
+    pair = clock()
     return FutureSpy(future = pair.future, spy = branch(pair.sink))
 
 
