@@ -56,7 +56,8 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
     accumulate_mau_sipms  = sum_histograms()
     accumulate_mean_sipms = sum_histograms()
 
-    event_count = fl.count()
+    time_execution = fl.spy_clock()
+    event_count    = fl.count()
 
     with tb.open_file(file_out, 'w', filters=tbl.filters(compression)) as h5out:
 
@@ -71,7 +72,8 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
 
         out = fl.push(
             source = wf_from_files(files_in, raw_data_type_),
-            pipe   = fl.pipe(fl.slice(*event_range, close_all = True),
+            pipe   = fl.pipe(time_execution.spy,
+                             fl.slice(*event_range, close_all = True),
                              print_every(print_mod),
                              make_mau_stream,
                              make_mean_stream,
@@ -82,7 +84,7 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
             result = dict(mau         = accumulate_mau_sipms .future,
                           mean        = accumulate_mean_sipms.future,
                           event_count =           event_count.future,
-            ))
+                          total_time  =        time_execution.future))
 
         write_hist(table_name  = 'sipmMAU')(out.mau )
         write_hist(table_name  = 'sipm'   )(out.mean)

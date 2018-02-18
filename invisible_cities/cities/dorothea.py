@@ -45,6 +45,7 @@ def dorothea(files_in, file_out, compression, event_range, print_mod, run_number
                                    args = ("pmap", "selector_output", "event_number", "timestamp"),
                                    out  = "pointlike_event"                                       )
 
+    time_execution        = fl.spy_clock()
     event_count_in        = fl.spy_count()
     event_count_out       = fl.spy_count()
 
@@ -56,6 +57,7 @@ def dorothea(files_in, file_out, compression, event_range, print_mod, run_number
 
         return push(source = pmap_from_files(files_in),
                     pipe   = pipe(
+                        time_execution    .spy                  ,
                         fl.slice(*event_range, close_all = True),
                         print_every(print_mod)                  ,
                         event_count_in       .spy               ,
@@ -71,4 +73,5 @@ def dorothea(files_in, file_out, compression, event_range, print_mod, run_number
                                   events_out = event_count_out.future,
                                   empty_s1   = empty_s1       .future,
                                   empty_s2   = empty_s2       .future,
-                                  selection  = pmap_select    .future))
+                                  selection  = pmap_select    .future,
+                                  total_time = time_execution .future))

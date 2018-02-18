@@ -42,6 +42,7 @@ def penthesilea(files_in, file_out, compression, event_range, print_mod, run_num
                            args = ("pmap", "selector_output", "event_number", "timestamp"),
                            out  = "hits"                                                  )
 
+    time_execution  = df.spy_clock()
     event_count_in  = df.spy_count()
     event_count_out = df.spy_count()
 
@@ -56,6 +57,7 @@ def penthesilea(files_in, file_out, compression, event_range, print_mod, run_num
 
         return push(source = pmap_from_files(files_in),
                     pipe   = pipe(
+                        time_execution       .spy               ,
                         df.slice(*event_range, close_all = True),
                         print_every(print_mod)                  ,
                         event_count_in       .spy               ,
@@ -72,4 +74,5 @@ def penthesilea(files_in, file_out, compression, event_range, print_mod, run_num
                                   events_out = event_count_out.future,
                                   empty_s1   = empty_s1       .future,
                                   empty_s2   = empty_s2       .future,
-                                  selection  = pmap_select    .future))
+                                  selection  = pmap_select    .future,
+                                  total_time = time_execution .future))

@@ -69,6 +69,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
     empty_indices_s2 = fl.count_filter(check_nonempty_indices,
                                        args = "s2_indices")
 
+    time_execution  = fl.spy_clock()
     event_count_in  = fl.spy_count()
     event_count_out = fl.spy_count()
 
@@ -86,6 +87,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
 
         return push(source = wf_from_files(files_in, WfType.rwf),
                     pipe   = pipe(
+                                time_execution.spy,
                                 fl.slice(*event_range, close_all = True),
                                 print_every(print_mod),
                                 event_count_in.spy,
@@ -103,7 +105,8 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
                     result = dict(events_in  = event_count_in  .future,
                                   events_out = event_count_out .future,
                                   empty_s1   = empty_indices_s1.future,
-                                  empty_s2   = empty_indices_s2.future))
+                                  empty_s2   = empty_indices_s2.future,
+                                  total_time = time_execution  .future))
 
 
 

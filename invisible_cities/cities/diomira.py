@@ -48,11 +48,13 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
         write_event_info = fl.sink(write_event_info_, args=("run_number", "event_number", "timestamp"))
         write_mc         = fl.sink(write_mc_        , args=(        "mc", "event_number"             ))
 
+        time_execution = fl.spy_clock()
         event_count_in = fl.spy_count()
 
         return push(
             source = wf_from_files(files_in, WfType.mcrd),
-            pipe   = pipe(fl.slice(*event_range, close_all = True) ,
+            pipe   = pipe(time_execution    .spy ,
+                          fl.slice(*event_range, close_all = True) ,
                           event_count_in    .spy ,
                           print_every(print_mod) ,
                           simulate_pmt_response_ ,
@@ -62,7 +64,8 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
                                write_sipm        ,
                                write_mc          ,
                                write_event_info) ),
-            result = dict(events_in = event_count_in.future))
+            result = dict(events_in  = event_count_in.future,
+                          total_time = time_execution.future))
 
 
 def simulate_pmt_response(run_number):
