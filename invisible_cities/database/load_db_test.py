@@ -5,6 +5,10 @@ import numpy as np
 from pytest  import fixture
 from os.path import join
 
+
+# TODO: Test database intervals
+
+
 def test_pmts_pd():
     """Check that we retrieve the correct number of PMTs."""
     pmts = DB.DataPMT()
