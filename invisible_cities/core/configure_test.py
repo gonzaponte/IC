@@ -1,5 +1,6 @@
-from os import getenv
-from os import path
+from os       import getenv
+from os       import path
+from argparse import Namespace
 
 import pytest
 from   pytest import mark
@@ -14,8 +15,7 @@ from . configure import make_config_file_reader
 from . exceptions import NoInputFiles
 from . exceptions import NoOutputFile
 
-from .. cities.base_cities import City
-from .. cities.penthesilea import Penthesilea
+from ..cities.components import city
 
 
 config_file_format = """
@@ -293,33 +293,27 @@ event_range  = 14,
     return str(file_name)
 
 
-class DummyCity(City):
-
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        self.cnt.n_events_tot = 10
-
-    def file_loop(self): pass
-    def get_writers(self, h5out): pass
-    def write_parameters(self, h5out): pass
+@city
+def dummy_city(files_in, file_out, event_range, print_mod, run_number, compression):
+    return Namespace(events_out = 10)
 
 
-def test_config_drive_fails_without_config_file():
+def test_config_city_fails_without_config_file():
     argv = 'dummy'.split()
     with raises(SystemExit):
-        DummyCity.drive(argv)
+        dummy_city(**configure(argv))
 
-def test_config_drive_fails_without_input_file(simple_conf_file_name):
+def test_config_city_fails_without_input_file(simple_conf_file_name):
     argv = 'dummy {simple_conf_file_name}'.format(**locals()).split()
     with raises(NoInputFiles):
-        DummyCity.drive(argv)
+        dummy_city(**configure(argv))
 
-def test_config_drive_fails_without_output_file(simple_conf_file_name):
+def test_config_city_fails_without_output_file(simple_conf_file_name):
     conf   = simple_conf_file_name
     infile = conf # any existing file will do as a dummy for now
     argv = 'dummy {conf} -i {infile}'.format(**locals()).split()
     with raises(NoOutputFile):
-        DummyCity.drive(argv)
+        dummy_city(**configure(argv))
 
 
 @mark.parametrize(     'name             flags           value'.split(),
@@ -341,22 +335,5 @@ def test_config_drive_flags(simple_conf_file_name, tmpdir_factory, name, flags, 
     infile = conf # any existing file will do as a dummy for now
     outfile = tmpdir_factory.mktemp('drive-config').join('dummy-output-file' + name)
     argv = 'dummy {conf} -i {infile} -o {outfile} {flags}'.format(**locals()).split()
-    conf_ns, _ = DummyCity.drive(argv)
-    assert getattr(conf_ns, name) == value
-
-
-@mark.parametrize('flags value counter'.split(),
-                  (('-e all'   , 10, 'n_events_tot'), # 10 events in the file
-                   ('-e   9'   ,  9, 'n_events_tot'), # [ 0,  9) -> 9
-                   ('-e 5 9'   ,  4, 'n_events_tot'), # [ 5,  9) -> 4
-                   ('-e 2 last',  8, 'n_events_tot'), # events [2, 10) -> 8
-                  ))
-def test_config_drive_penthesilea_counters(config_tmpdir, KrMC_pmaps_filename, flags, value, counter):
-    input_filename  = KrMC_pmaps_filename
-    config_filename = 'invisible_cities/config/penthesilea.conf'
-    flags_wo_spaces = flags.replace(" ", "_")
-    output_filename = path.join(config_tmpdir,
-                                f'penthesilea_counters_output_{flags_wo_spaces}.h5')
-    argv = f'penthesilea {config_filename} -i {input_filename} -o {output_filename} {flags}'.split()
-    conf_ns, counters = Penthesilea.drive(argv)
-    assert getattr(counters, counter) == value
+    conf_ns = configure(argv)
+    assert conf_ns[name] == value
