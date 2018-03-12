@@ -80,7 +80,7 @@ def test_irene_electrons_40keV(config_tmpdir, ICDIR, s12params, thr_sipm_type, t
 
     nrequired  = 2
 
-    conf = configure('dummy invisible_cities/config/liquid_irene.conf'.split())
+    conf = configure('dummy invisible_cities/config/irene.conf'.split())
     conf.update(dict(run_number    = 0,
                      files_in      = PATH_IN,
                      file_out      = PATH_OUT,
@@ -125,7 +125,7 @@ def test_irene_run_2983(config_tmpdir, ICDIR, s12params):
 
     nrequired = 2
 
-    conf = configure('dummy invisible_cities/config/liquid_irene.conf'.split())
+    conf = configure('dummy invisible_cities/config/irene.conf'.split())
     conf.update(dict(run_number   = 2983,
                      files_in     = PATH_IN,
                      file_out     = PATH_OUT,
@@ -192,7 +192,7 @@ def test_empty_events_issue_81(config_tmpdir, ICDIR, s12params):
 
     nrequired = 10
 
-    conf = configure('dummy invisible_cities/config/liquid_irene.conf'.split())
+    conf = configure('dummy invisible_cities/config/irene.conf'.split())
     conf.update(dict(run_number   = 0,
                      files_in     = PATH_IN,
                      file_out     = PATH_OUT,
@@ -211,7 +211,7 @@ def test_empty_events_issue_81(config_tmpdir, ICDIR, s12params):
 def test_irene_electrons_40keV_pmt_active_is_correctly_set(job_info_missing_pmts, config_tmpdir, ICDIR, s12params):
     "Check that PMT active correctly describes the PMT configuration of the detector"
     nrequired = 1
-    conf = configure('dummy invisible_cities/config/liquid_irene.conf'.split())
+    conf = configure('dummy invisible_cities/config/irene.conf'.split())
     conf.update(dict(run_number   =  job_info_missing_pmts.run_number,
                      files_in     =  job_info_missing_pmts. input_filename,
                      file_out     =  job_info_missing_pmts.output_filename,

@@ -22,7 +22,7 @@ def test_dorothea_KrMC(config_tmpdir, KrMC_pmaps_filename, KrMC_kdst):
     nrequired = 10
     df_true   = KrMC_kdst.true
 
-    conf = configure('dummy invisible_cities/config/liquid_dorothea.conf'.split())
+    conf = configure('dummy invisible_cities/config/dorothea.conf'.split())
     conf.update(dict(files_in    = PATH_IN,
                      file_out    = PATH_OUT,
                      event_range = (0, nrequired),
@@ -50,7 +50,7 @@ def test_dorothea_filter_events(config_tmpdir, Kr_pmaps_run4628_filename):
 
     PATH_OUT = os.path.join(config_tmpdir, 'KrDST_4628.h5')
     nrequired = 50
-    conf = configure('dummy invisible_cities/config/liquid_dorothea.conf'.split())
+    conf = configure('dummy invisible_cities/config/dorothea.conf'.split())
     conf.update(dict(run_number  = 4628,
                      files_in    = PATH_IN,
                      file_out    = PATH_OUT,

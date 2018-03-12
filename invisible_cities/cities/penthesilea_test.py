@@ -17,7 +17,7 @@ from .  penthesilea            import penthesilea
 def test_penthesilea_KrMC(KrMC_pmaps_filename, KrMC_hdst, config_tmpdir):
     PATH_IN   = KrMC_pmaps_filename
     PATH_OUT  = os.path.join(config_tmpdir,'Kr_HDST.h5')
-    conf      = configure('dummy invisible_cities/config/liquid_penthesilea.conf'.split())
+    conf      = configure('dummy invisible_cities/config/penthesilea.conf'.split())
     nevt_req  = 10
 
     DF_TRUE =  KrMC_hdst.true
@@ -40,7 +40,7 @@ def test_penthesilea_filter_events(config_tmpdir, Kr_pmaps_run4628_filename):
 
     PATH_OUT = os.path.join(config_tmpdir, 'KrDST_4628.h5')
     nrequired = 50
-    conf = configure('dummy invisible_cities/config/liquid_penthesilea.conf'.split())
+    conf = configure('dummy invisible_cities/config/penthesilea.conf'.split())
     conf.update(dict(run_number = 4628,
                      files_in   = PATH_IN,
                      file_out   = PATH_OUT,
@@ -91,7 +91,7 @@ def test_penthesilea_filter_events(config_tmpdir, Kr_pmaps_run4628_filename):
 def test_penthesilea_produces_tracks_when_require(KrMC_pmaps_filename, KrMC_hdst, config_tmpdir):
     PATH_IN   = KrMC_pmaps_filename
     PATH_OUT  = os.path.join(config_tmpdir, "Kr_HDST_with_MC.h5")
-    conf      = configure('dummy invisible_cities/config/liquid_penthesilea.conf'.split())
+    conf      = configure('dummy invisible_cities/config/penthesilea.conf'.split())
     nevt_req  = 10
 
     conf.update(dict(files_in        = PATH_IN,

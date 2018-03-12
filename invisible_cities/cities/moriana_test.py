@@ -16,7 +16,7 @@ def test_moriana_electrons_40keV(config_tmpdir, ICDATADIR):
 
     nrequired  = 2
 
-    conf = configure('dummy invisible_cities/config/liquid_moriana.conf'.split())
+    conf = configure('dummy invisible_cities/config/moriana.conf'.split())
     conf.update(dict(run_number   = 0,
                      files_in     = PATH_IN,
                      file_out     = PATH_OUT,
