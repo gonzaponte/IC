@@ -107,3 +107,9 @@ def filter_limits(limits, buffer_length):
     if n_false_second_half % 2: within_buffer[- n_false_second_half - 1] = False
 
     return limits[within_buffer]
+
+
+def valid_integral_limits(sample_width, n_integrals, integral_start, integral_width, period, buffer_length):
+    corr, anti = integral_limits(sample_width, n_integrals, integral_start, integral_width, period)
+    return (filter_limits(corr, buffer_length),
+            filter_limits(anti, buffer_length))

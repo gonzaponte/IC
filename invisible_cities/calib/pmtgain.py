@@ -11,7 +11,7 @@ from functools import partial
 
 import numpy  as np
 
-from .                         import      calib_functions as cf
+from .. reco                   import      calib_functions as cf
 from .. io   .         hist_io import          hist_writer
 from .. io   .run_and_event_io import run_and_event_writer
 from .. icaro.hst_functions    import shift_to_bin_centers
