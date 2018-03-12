@@ -19,8 +19,8 @@ from .. evm .event_model       import HitCollection
 from .. core.system_of_units_c import units
 from .. core.exceptions        import XYRecoFail
 from .. reco                   import calib_sensors_functions as csf
-from .. reco                   import  peak_functions as pkf
-from .. reco                   import pmaps_functions as pmf
+from .. reco                   import          peak_functions as pkf
+from .. reco                   import         pmaps_functions as pmf
 from .. reco.xy_algorithms     import corona
 from .. filters.s1s2_filter    import S12Selector
 from .. filters.s1s2_filter    import pmap_filter
@@ -140,7 +140,6 @@ def wf_from_files(paths, wf_type):
              sipm_wfs) = get_wfs(h5in, wf_type)
             mc_tracks  = h5in.root.MC.MCTracks if run_number <= 0 else None
             for pmt, sipm, (event_number, timestamp) in zip(pmt_wfs, sipm_wfs, event_infos[:]):
-                # yield EventData(pmt=pmt, sipm=sipm, mc=mc_tracks, event_info=ei)
                 yield dict(pmt=pmt, sipm=sipm, mc=mc_tracks,
                            run_number=run_number, event_number=event_number, timestamp=timestamp)
             # NB, the monte_carlo writer is different from the others:
