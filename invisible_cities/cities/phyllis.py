@@ -62,6 +62,7 @@ def phyllis(files_in, file_out, compression, event_range, print_mod, run_number,
     accumulate_light = sum_histograms()
     accumulate_dark  = sum_histograms()
     event_count      = fl.count()
+    time_execution   = fl.spy_clock()
 
     with tb.open_file(file_out, 'w', filters=tbl.filters(compression)) as h5out:
         write_event_info    = run_and_event_writer(h5out)
@@ -74,7 +75,8 @@ def phyllis(files_in, file_out, compression, event_range, print_mod, run_number,
 
         out = fl.push(
             source = wf_from_files(files_in, raw_data_type_),
-            pipe   = fl.pipe(fl.slice(*event_range, close_all=True),
+            pipe   = fl.pipe(time_execution.spy,
+                             fl.slice(*event_range, close_all=True),
                              print_every(print_mod),
                              deconvolve,
                              fl.fork(("cwf", integrate_light, bin_waveforms, accumulate_light   .sink),
@@ -83,7 +85,8 @@ def phyllis(files_in, file_out, compression, event_range, print_mod, run_number,
                                                                              event_count        .sink )),
             result = dict(spe         = accumulate_light.future,
                           dark        = accumulate_dark .future,
-                          event_count =      event_count.future)
+                          event_count =      event_count.future,
+                          total_time  =   time_execution.future)
         )
 
         write_hist(table_name = 'pmt_spe' )(out.spe )

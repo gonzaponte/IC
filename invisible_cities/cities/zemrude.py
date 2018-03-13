@@ -39,7 +39,8 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
     accumulate_mode       = sum_histograms()
     accumulate_median     = sum_histograms()
 
-    event_count = fl.count()
+    time_execution = fl.spy_clock()
+    event_count    = fl.count()
 
     with tb.open_file(file_out, 'w', filters=tbl.filters(compression)) as h5out:
         write_event_info    = run_and_event_writer(h5out)
@@ -53,7 +54,8 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
 
         out = fl.push(
             source = wf_from_files(files_in, raw_data_type_),
-            pipe   = fl.pipe(fl.slice(*event_range, close_all=True),
+            pipe   = fl.pipe(time_execution.spy,
+                             fl.slice(*event_range, close_all=True),
                              print_every(print_mod),
                              fl.fork(("sipm", calibrate_with_mode  , bin_waveforms, accumulate_mode    .sink),
                                      ("sipm", calibrate_with_median, bin_waveforms, accumulate_median  .sink),
@@ -61,7 +63,8 @@ def zemrude(files_in, file_out, compression, event_range, print_mod, run_number,
                                                                                     event_count        .sink )),
             result = dict(mode        = accumulate_mode  .future,
                           median      = accumulate_median.future,
-                          event_count =       event_count.future))
+                          event_count =       event_count.future,
+                          total_time  =    time_execution.future))
 
         write_hist(table_name = "mode"  )(out.mode  )
         write_hist(table_name = "median")(out.median)

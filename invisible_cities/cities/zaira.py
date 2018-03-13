@@ -1,3 +1,5 @@
+import time
+
 from argparse import Namespace
 
 import numpy  as np
@@ -27,6 +29,7 @@ def zaira(files_in, file_out,
           rmin = None, rmax = None,
           zmin = None, zmax = None,
           emin = None, emax = None):
+    t0 = time.time()
 
     fiducial_x     = get_x_limits(xmin, xmax)
     fiducial_y     = get_y_limits(ymin, ymax)
@@ -60,8 +63,10 @@ def zaira(files_in, file_out,
         write_xy = xy_correction_writer(h5out)
         write_xy(*xycorr._xs, xycorr._fs, xycorr._us, nevt)
 
+    t1 = time.time()
     return Namespace(events_in  = len(    dst),
-                     events_out = len(fid_dst))
+                     events_out = len(fid_dst),
+                     total_time = t1 - t0)
 
 
 def get_x_limits(xmin, xmax):

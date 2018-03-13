@@ -82,6 +82,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
     empty_indices_s2 = fl.count_filter(check_nonempty_indices,
                                        args = "s2_indices")
 
+    time_execution  = fl.spy_clock()
     event_count_in  = fl.spy_count()
     event_count_out = fl.spy_count()
 
@@ -98,25 +99,26 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
         write_pmap       = sink(write_pmap_      , args=(      "pmap", "event_number"             ))
 
         return push(source = wf_from_files(files_in, WfType.rwf),
-                    pipe   = pipe(
-                                fl.slice(*event_range, close_all=True),
-                                print_every(print_mod),
-                                event_count_in.spy,
-                                rwf_to_cwf,
-                                cwf_to_ccwf,
-                                zero_suppress,
-                                empty_indices_s1.filter,
-                                empty_indices_s2.filter,
-                                sipm_rwf_to_cal,
-                                compute_pmap,
-                                event_count_out.spy,
-                                fl.fork(write_pmap,
-                                        write_mc,
-                                        write_event_info)),
+                    pipe   = pipe(time_execution.spy,
+                                  fl.slice(*event_range, close_all=True),
+                                  print_every(print_mod),
+                                  event_count_in.spy,
+                                  rwf_to_cwf,
+                                  cwf_to_ccwf,
+                                  zero_suppress,
+                                  empty_indices_s1.filter,
+                                  empty_indices_s2.filter,
+                                  sipm_rwf_to_cal,
+                                  compute_pmap,
+                                  event_count_out.spy,
+                                  fl.fork(write_pmap,
+                                          write_mc,
+                                          write_event_info)),
                     result = dict(events_in  = event_count_in  .future,
                                   events_out = event_count_out .future,
                                   empty_s1   = empty_indices_s1.future,
-                                  empty_s2   = empty_indices_s2.future))
+                                  empty_s2   = empty_indices_s2.future,
+                                  total_time = time_execution  .future))
 
 
 
