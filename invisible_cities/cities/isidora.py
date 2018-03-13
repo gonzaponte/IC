@@ -48,15 +48,17 @@ def isidora(files_in, file_out, compression, event_range, print_mod, run_number,
         write_event_info = sink(write_event_info_, args=("run_number", "event_number", "timestamp"))
         write_mc         = sink(write_mc_        , args=(        "mc", "event_number"             ))
 
-        event_count = fl.count()
+        time_execution = fl.spy_clock()
+        event_count    = fl.count()
 
         return push(
             source = wf_from_files(files_in, WfType.rwf),
-            pipe   = pipe(fl.slice(*event_range, close_all=True),
+            pipe   = pipe(time_execution.spy,
+                          fl.slice(*event_range, close_all=True),
                           print_every(print_mod),
                           fork((rwf_to_cwf, write_pmt       ),
                                (            write_sipm      ),
                                (            write_mc        ),
                                (            write_event_info),
                                (            event_count.sink))),
-            result = (event_count.future,))
+            result = (event_count.future, time_execution.future))
