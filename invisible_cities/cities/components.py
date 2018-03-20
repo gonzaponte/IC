@@ -182,9 +182,9 @@ def pmap_from_files(paths):
         with tb.open_file(path, "r") as h5in:
             run_number  = get_run_number(h5in)
             event_infos = h5in.root.Run.events
-            mc_tracks   = h5in.root.MC .MCTracks if run_number <= 0 else None
+            mc_info     = get_mc_info   (h5in) if run_number <= 0 else None
             for event_number, timestamp in event_infos[:]:
-                yield dict(pmap=pmaps[event_number], mc=mc_tracks,
+                yield dict(pmap=pmaps[event_number], mc=mc_info,
                            run_number=run_number, event_number=event_number, timestamp=timestamp)
             # NB, the monte_carlo writer is different from the others:
             # it needs to be given the WHOLE TABLE (rather than a
