@@ -7,7 +7,7 @@ from .. reco                  import tbl_functions        as tbl
 from .. reco                  import  peak_functions      as pkf
 from .. core.random_sampling  import NoiseSampler         as SiPMsNoiseSampler
 from .. io  .        pmaps_io import          pmap_writer
-from .. io  .           mc_io import      mc_track_writer
+from .. io  .       mcinfo_io import       mc_info_writer
 from .. io  .run_and_event_io import run_and_event_writer
 
 from .. dataflow            import dataflow as fl
@@ -90,7 +90,7 @@ def irene(files_in, file_out, compression, event_range, print_mod, run_number,
 
         # Define writers...
         write_event_info_ = run_and_event_writer(h5out)
-        write_mc_         = mc_track_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc_         = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
         write_pmap_       = pmap_writer(h5out, compression=compression)
 
         # ... and make them sinks
