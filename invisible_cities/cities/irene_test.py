@@ -9,6 +9,7 @@ from pytest import fixture
 
 from .. core                import system_of_units as units
 from .. core.configure      import configure
+from .. core.testing_utils  import exactly
 from .. types.ic_types      import minmax
 from .. io.run_and_event_io import read_run_and_event
 from .. evm.ic_containers   import S12Params as S12P
@@ -94,21 +95,18 @@ def test_irene_electrons_40keV(config_tmpdir, ICDIR, s12params, thr_sipm_type, t
     nactual = cnt.events_in
     assert nrequired == nactual
 
-    with tb.open_file(PATH_IN , mode='r') as h5in, \
+    with tb.open_file(PATH_IN,  mode='r') as h5in, \
          tb.open_file(PATH_OUT, mode='r') as h5out:
             nrow = 0
-            mctracks_in  = h5in .root.MC.MCTracks[nrow]
-            mctracks_out = h5out.root.MC.MCTracks[nrow]
+            mctracks_in  = h5in .root.MC.particles[nrow]
+            mctracks_out = h5out.root.MC.particles[nrow]
             np.testing.assert_array_equal(mctracks_in, mctracks_out)
 
             # check events numbers & timestamps
             evts_in     = h5in .root.Run.events[:nactual]
             evts_out_u8 = h5out.root.Run.events[:nactual]
-            # The old format used <i4 for th event number; the new one
-            # uses <u8. Casting the latter to the former allows us to
-            # re-use the old test data files.
-            evts_out_i4 = evts_out_u8.astype([('evt_number', '<i4'), ('timestamp', '<u8')])
-            np.testing.assert_array_equal(evts_in, evts_out_i4)
+
+            np.testing.assert_array_equal(evts_in, evts_out_u8)
 
 
 @mark.slow
@@ -151,22 +149,18 @@ def test_irene_runinfo_run_2983(config_tmpdir, ICDIR):
 
 
     with tb.open_file(PATH_IN, mode='r') as h5in:
-        evt_in  = h5in.root.Run.events[0:2]
-        evts_in = []
-        ts_in   = []
-        for e in evt_in:
-            evts_in.append(e[0])
-            ts_in  .append(e[1])
+        evts_in = h5in.root.Run.events.cols.evt_number[:2]
+        ts_in   = h5in.root.Run.events.cols.timestamp [:2]
 
         rundf, evtdf = read_run_and_event(PATH_OUT)
         evts_out = evtdf.evt_number.values
-        ts_out = evtdf.timestamp.values
+        ts_out   = evtdf.timestamp .values
         np.testing.assert_array_equal(evts_in, evts_out)
         np.testing.assert_array_equal(  ts_in,   ts_out)
 
-        rin = h5in.root.Run.runInfo[:][0][0]
-        rout = rundf.run_number[0]
-        assert rin == rout
+        run_number_in  = h5in.root.Run.runInfo[0][0]
+        run_number_out = rundf.run_number[0]
+        assert run_number_in == run_number_out
 
 
 @mark.serial
@@ -185,10 +179,10 @@ def test_irene_output_file_structure(config_tmpdir, ICDIR):
         assert "runInfo"      in h5out.root.Run
 
 
-def test_empty_events_issue_81(config_tmpdir, ICDIR, s12params):
+def test_empty_events_issue_81(config_tmpdir, ICDATADIR, s12params):
     # NB: explicit PATH_OUT
-    PATH_IN = os.path.join(ICDIR, 'database/test_data/', 'irene_bug_Kr_ACTIVE_7bar_RWF.h5')
-    PATH_OUT = os.path.join(config_tmpdir,               'irene_bug_Kr_ACTIVE_7bar_CWF.h5')
+    PATH_IN = os.path.join (ICDATADIR    , 'irene_bug_Kr_ACTIVE_7bar_RWF.h5')
+    PATH_OUT = os.path.join(config_tmpdir, 'irene_bug_Kr_ACTIVE_7bar_CWF.h5')
 
     nrequired = 10
 
@@ -221,3 +215,29 @@ def test_irene_electrons_40keV_pmt_active_is_correctly_set(job_info_missing_pmts
     irene = Irene(**conf)
 
     assert irene.pmt_active == job_info_missing_pmts.pmt_active
+
+
+@mark.skip
+def test_irene_empty_pmap_output(ICDATADIR, output_tmpdir, s12params):
+    file_in  = os.path.join(ICDATADIR    , "kr_rwf_0_0_7bar_NEXT_v1_00_05_v0.9.2_20171011_krmc_diomira_3evt.h5")
+    file_out = os.path.join(output_tmpdir, "kr_rwf_0_0_7bar_NEXT_v1_00_05_v0.9.2_20171011_pmaps_3evt.h5")
+
+    nrequired = 3
+    conf = configure('dummy invisible_cities/config/irene.conf'.split())
+    conf.update(dict(run_number   = 4714,
+                     files_in     = file_in,
+                     file_out     = file_out,
+                     event_range  = (0, nrequired),
+                     **unpack_s12params(s12params))) # s12params are just dummy values in this test
+
+    cnt = irene(**conf)
+
+    assert cnt.events_in           == 3
+    assert cnt.empty_s1 .n_failed  == 0
+    assert cnt.empty_s2 .n_failed  == 0
+
+    with tb.open_file(file_in) as fin:
+        with tb.open_file(file_out) as fout:
+            got      = fout.root.Run.events.cols.evt_number[:]
+            expected = fin .root.Run.events.cols.evt_number[::2] # skip event in the middle
+            assert got == exactly(expected)
