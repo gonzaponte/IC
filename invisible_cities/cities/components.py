@@ -154,6 +154,12 @@ def get_sipm_wfs(h5in, wf_type):
     else                       : raise  TypeError(f"Invalid WfType: {type(wf_type)}")
 
 
+def get_mc_info(h5in):
+    return (h5in.root.MC.extents  ,
+            h5in.root.MC.hits     ,
+            h5in.root.MC.particles)
+
+
 def wf_from_files(paths, wf_type):
     for path in paths:
         with tb.open_file(path, "r") as h5in:
@@ -161,9 +167,9 @@ def wf_from_files(paths, wf_type):
             run_number  = get_run_number(h5in)
             pmt_wfs     = get_pmt_wfs (h5in, wf_type)
             sipm_wfs    = get_sipm_wfs(h5in, wf_type)
-            mc_tracks  = h5in.root.MC.MCTracks if run_number <= 0 else None
+            mc_info     = get_mc_info (h5in         ) if run_number <= 0 else None
             for pmt, sipm, (event_number, timestamp) in zip(pmt_wfs, sipm_wfs, event_infos[:]):
-                yield dict(pmt=pmt, sipm=sipm, mc=mc_tracks,
+                yield dict(pmt=pmt, sipm=sipm, mc=mc_info,
                            run_number=run_number, event_number=event_number, timestamp=timestamp)
             # NB, the monte_carlo writer is different from the others:
             # it needs to be given the WHOLE TABLE (rather than a
