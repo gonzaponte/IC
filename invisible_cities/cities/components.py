@@ -205,6 +205,7 @@ def sensor_data(path, wf_type):
 def calibrate_pmts(run_number, n_MAU, thr_MAU):
     DataPMT    = load_db.DataPMT(run_number = run_number)
     adc_to_pes = np.abs(DataPMT.adc_to_pes.values)
+    adc_to_pes = adc_to_pes[adc_to_pes > 0]
 
     def calibrate_pmts(cwf):# -> CCwfs:
         return csf.calibrate_pmts(cwf,
