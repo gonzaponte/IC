@@ -8,7 +8,7 @@ from .. reco                 import sensor_functions as sf
 from .. reco                 import    wfm_functions as wfm
 from .. sierpe               import fee              as FE
 from .. io.rwf_io            import           rwf_writer
-from .. io.           mc_io  import      mc_track_writer
+from .. io.       mcinfo_io  import       mc_info_writer
 from .. io.run_and_event_io  import run_and_event_writer
 from .. database             import load_db
 from .. core.random_sampling import NoiseSampler as SiPMsNoiseSampler
@@ -32,7 +32,6 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
 
     sd = sensor_data(files_in[0], WfType.mcrd)
 
-
     simulate_pmt_response_  = fl.map(simulate_pmt_response (run_number)                           , args="pmt" , out= ("pmt_sim", "blr_sim"))
     simulate_sipm_response_ = fl.map(simulate_sipm_response(run_number, sd.SIPMWL, sipm_noise_cut), args="sipm", out="sipm_sim"             )
 
@@ -43,7 +42,7 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
         write_sipm = fl.sink(RWF(table_name='sipmrwf', n_sensors=sd.NSIPM, waveform_length=sd.SIPMWL                    ), args="sipm_sim")
 
         write_event_info_ = run_and_event_writer(h5out)
-        write_mc_         = mc_track_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc_         = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
 
         write_event_info = fl.sink(write_event_info_, args=("run_number", "event_number", "timestamp"))
         write_mc         = fl.sink(write_mc_        , args=(        "mc", "event_number"             ))
