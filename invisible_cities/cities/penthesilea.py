@@ -4,7 +4,7 @@ import tables as tb
 
 from .. reco                  import tbl_functions        as tbl
 from .. io  .         hits_io import          hits_writer
-from .. io  .           mc_io import      mc_track_writer
+from .. io  .       mcinfo_io import       mc_info_writer
 from .. io  .run_and_event_io import run_and_event_writer
 
 from .. dataflow            import dataflow as df
@@ -47,7 +47,7 @@ def penthesilea(files_in, file_out, compression, event_range, print_mod, run_num
     with tb.open_file(file_out, "w", filters = tbl.filters(compression)) as h5out:
 
         # Define writers...
-        write_mc_        = mc_track_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc_        = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
 
         write_mc         = df.sink(write_mc_                  , args=(        "mc", "event_number"             ))
         write_event_info = df.sink(run_and_event_writer(h5out), args=("run_number", "event_number", "timestamp"))

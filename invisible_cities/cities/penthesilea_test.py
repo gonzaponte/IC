@@ -9,7 +9,7 @@ from .. core.system_of_units_c import units
 from .. core.testing_utils     import assert_dataframes_close
 from .. core.configure         import configure
 from .. io                     import dst_io as dio
-from .. io.mchits_io           import load_mchits
+from .. io.mcinfo_io           import load_mchits
 
 from .  penthesilea            import penthesilea
 
