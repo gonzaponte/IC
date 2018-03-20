@@ -34,7 +34,7 @@ def init_city(ICDIR, config_tmpdir):
 @mark.parametrize("         writer  group      node      column        thing".split(),
                   [(   hits_writer, "RECO" , "Events"  , "event"     , "hits"),
                    (     kr_writer, "DST"  , "Events"  , "event"     , "kr"  ),
-                   (mc_info_writer, "MC"   , "MCTracks", "event_indx", "mc"  ),
+                   (mc_info_writer, "MC"   , "extents" , "evt_number", "mc"  ),
                    (   pmap_writer, "PMAPS", "S1"      , "event"     , "s1"  ),
                    (   pmap_writer, "PMAPS", "S2"      , "event"     , "s2"  ),
                    (   pmap_writer, "PMAPS", "S2Si"    , "event"     , "s2si")])
