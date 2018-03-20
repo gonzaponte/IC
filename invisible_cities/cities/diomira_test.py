@@ -3,6 +3,7 @@ import tables as tb
 import numpy  as np
 
 from pytest import mark
+from pytest import raises
 
 from .. core                 import system_of_units as units
 from .. core.configure       import configure
@@ -13,15 +14,16 @@ from .. sierpe   import fee as FEE
 from .  diomira  import diomira
 
 
-def test_diomira_fee_table(ICDIR):
+@mark.skip
+def test_diomira_fee_table(ICDATADIR):
     "Test that FEE table reads back correctly with expected values."
-    RWF_file = os.path.join(ICDIR, 'database/test_data/electrons_40keV_z250_RWF.h5')
+    RWF_file = os.path.join(ICDATADIR, 'electrons_40keV_z250_RWF.h5')
 
     with tb.open_file(RWF_file, 'r') as e40rwf:
-        fee = tbl.read_FEE_table(e40rwf.root.MC.FEE)
+        fee = tbl.read_FEE_table(e40rwf.root.FEE.FEE)
         feep = fee.fee_param
         eps = 1e-04
-        # Ignoring PEP8 to imrpove readability by making symmetry explicit.
+        # Ignoring PEP8 to improve readability by making symmetry explicit.
         assert len(fee.adc_to_pes)    == e40rwf.root.RD.pmtrwf.shape[1]
         assert len(fee.coeff_blr)     == e40rwf.root.RD.pmtrwf.shape[1]
         assert len(fee.coeff_c)       == e40rwf.root.RD.pmtrwf.shape[1]
@@ -44,7 +46,7 @@ def test_diomira_fee_table(ICDIR):
         assert abs(feep.CEILING - FEE.CEILING)             < eps
 
 
-def test_diomira_identify_bug(ICDIR):
+def test_diomira_identify_bug(ICDATADIR):
     """Read a one-event file in which the energy of PMTs is equal to zero and
     asset it must be son. This test would fail for a normal file where there
     is always some energy in the PMTs. It's purpose is to provide an automaic
@@ -57,7 +59,7 @@ def test_diomira_identify_bug(ICDIR):
     The same event is later processed with Irene (where a protection
     that skips empty events has been added) to ensure that no crash occur."""
 
-    infile = os.path.join(ICDIR, 'database/test_data/irene_bug_Kr_ACTIVE_7bar_MCRD.h5')
+    infile = os.path.join(ICDATADIR, 'irene_bug_Kr_ACTIVE_7bar_MCRD.h5')
     with tb.open_file(infile, 'r') as h5in:
 
         pmtrd  = h5in.root.pmtrd
@@ -67,10 +69,10 @@ def test_diomira_identify_bug(ICDIR):
 
 
 @mark.slow
-def test_diomira_copy_mc_and_offset(config_tmpdir):
-    PATH_IN = os.path.join(os.environ['ICDIR'], 'database/test_data/', 'electrons_40keV_z250_MCRD.h5')
-    PATH_OUT = os.path.join(config_tmpdir,                             'electrons_40keV_z250_RWF.h5')
-    # PATH_OUT = os.path.join(os.environ['IC_DATA'],                             'electrons_40keV_z250_test_RWF.h5')
+def test_diomira_copy_mc_and_offset(ICDATADIR, config_tmpdir):
+    PATH_IN  = os.path.join(ICDATADIR    , 'electrons_40keV_z250_MCRD.h5')
+    PATH_OUT = os.path.join(config_tmpdir, 'electrons_40keV_z250_RWF.h5' )
+    #PATH_OUT = os.path.join(ICDATADIR, 'electrons_40keV_z250_test_RWF.h5')
 
     start_evt  = tbl.event_number_from_input_file_name(PATH_IN)
     run_number = 0
@@ -93,18 +95,53 @@ def test_diomira_copy_mc_and_offset(config_tmpdir):
             assert h5out.root.Run.runInfo[0]['run_number'] == run_number
             assert h5out.root.Run.events [0]['evt_number'] == start_evt
 
-            # check mctracks
+            # check mcextents
             # we have to convert manually into a tuple because MCTracks[0]
             # returns an object of type numpy.void where we cannot index
             # using ranges like mctracks_in[1:]
-            mctracks_in  = tuple(h5in .root.MC.MCTracks[0])
-            mctracks_out = tuple(h5out.root.MC.MCTracks[0])
+            mcextents_in  = tuple(h5in.root .MC.extents[0])
+            mcextents_out = tuple(h5out.root.MC.extents[0])
             #evt number is not equal if we redefine first event number
-            assert mctracks_out[0] == start_evt
-            for e in zip(mctracks_in[1:], mctracks_out[1:]):
+            assert mcextents_out[0] == start_evt
+            for e in zip(mcextents_in[1:], mcextents_out[1:]):
                 np.testing.assert_array_equal(e[0],e[1])
 
             # check event number is different for each event
-            first_evt_number = h5out.root.MC.MCTracks[ 0][0]
-            last_evt_number  = h5out.root.MC.MCTracks[-1][0]
+            first_evt_number = h5out.root.MC.extents[ 0][0]
+            last_evt_number  = h5out.root.MC.extents[-1][0]
             assert first_evt_number != last_evt_number
+
+
+@mark.slow
+def test_diomira_mismatch_between_input_and_database(ICDATADIR, output_tmpdir):
+    file_in  = os.path.join(ICDATADIR    , 'electrons_40keV_z250_MCRD.h5')
+    file_out = os.path.join(output_tmpdir, 'electrons_40keV_z250_RWF_test_mismatch.h5')
+
+    conf = configure('diomira invisible_cities/config/diomira.conf'.split())
+    conf.update(dict(run_number  = -4500, # Must be a run number with dead pmts
+                     files_in    = file_in,
+                     file_out    = file_out,
+                     event_range = (0, 1)))
+
+    cnt = diomira(**conf)
+
+    # we are just interested in checking whether the code runs or not
+    assert cnt.events_in == 1
+
+
+@mark.skip
+@mark.slow
+def test_diomira_trigger_on_masked_pmt_raises_ValueError(ICDATADIR, output_tmpdir):
+    file_in  = os.path.join(ICDATADIR    , 'electrons_40keV_z250_MCRD.h5')
+    file_out = os.path.join(output_tmpdir, 'electrons_40keV_z250_RWF_test_trigger.h5')
+
+    conf = configure('diomira invisible_cities/config/diomira.conf'.split())
+    conf.update(dict(run_number   = -4500, # Must be a run number with dead pmts
+                     files_in     = file_in,
+                     file_out     = file_out,
+                     trigger_type = "S2",
+                     tr_channels  = (0,), # This is a masked PMT for this run
+                     event_range  = (0, 1)))
+
+    with raises(ValueError):
+        diomira(**conf)
