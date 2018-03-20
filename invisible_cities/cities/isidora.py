@@ -18,7 +18,7 @@ from .. dataflow.dataflow   import sink
 
 from .. reco                import tbl_functions as tbl
 from .. io.          rwf_io import           rwf_writer
-from .. io.           mc_io import      mc_track_writer
+from .. io.       mcinfo_io import       mc_info_writer
 from .. io.run_and_event_io import run_and_event_writer
 
 
@@ -43,7 +43,7 @@ def isidora(files_in, file_out, compression, event_range, print_mod, run_number,
         write_sipm = sink(RWF(table_name='sipmrwf', n_sensors=sd.NSIPM, waveform_length=sd.SIPMWL), args="sipm")
 
         write_event_info_ = run_and_event_writer(h5out)
-        write_mc_         = mc_track_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc_         = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
 
         write_event_info = sink(write_event_info_, args=("run_number", "event_number", "timestamp"))
         write_mc         = sink(write_mc_        , args=(        "mc", "event_number"             ))
