@@ -102,8 +102,10 @@ def test_penthesilea_produces_tracks_when_require(KrMC_pmaps_filename, KrMC_hdst
     penthesilea(**conf)
 
     with tb.open_file(PATH_OUT) as h5out:
-        assert "MC"          in h5out.root
-        assert "MC/MCTracks" in h5out.root
+        assert "MC"           in h5out.root
+        assert "MC/extents"   in h5out.root
+        assert "MC/hits"      in h5out.root
+        assert "MC/particles" in h5out.root
 
 
 @mark.serial
