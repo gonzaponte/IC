@@ -42,7 +42,7 @@ def diomira(files_in, file_out, compression, event_range, print_mod, run_number,
         write_sipm = fl.sink(RWF(table_name='sipmrwf', n_sensors=sd.NSIPM, waveform_length=sd.SIPMWL                    ), args="sipm_sim")
 
         write_event_info_ = run_and_event_writer(h5out)
-        write_mc_         = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc_         = mc_info_writer      (h5out) if run_number <= 0 else (lambda *_: None)
 
         write_event_info = fl.sink(write_event_info_, args=("run_number", "event_number", "timestamp"))
         write_mc         = fl.sink(write_mc_        , args=(        "mc", "event_number"             ))
