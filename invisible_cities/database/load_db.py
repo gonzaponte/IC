@@ -69,7 +69,7 @@ order by pos.SensorID'''.format(abs(run_number))
     ## Add default value to Sigma for runs without measurement
     if not data.Sigma.values.any():
         data.Sigma = 2.24
-        
+
     return data
 
 def DetectorGeo(db_file=DATABASE_LOCATION):
@@ -105,3 +105,31 @@ order by SensorID, BinEnergyPes;'''.format(abs(run_number))
     noise = np.array(data).reshape(nsipms, nbins)
 
     return noise, noise_bins, baselines
+
+
+def ElectronLifetimeXY(t_min, t_max, db_file=DATABASE_LOCATION):
+    conn   = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+
+    sqlbaseline = '''select RunNumber MeanTime X Y Lifetime Uncertainty from ElectronLifetimeXY
+where (MinTime >= {0} and MaxTime <= {0});'''.format(t_min, t_max)
+    cursor.execute(sqlbaseline)
+    df = pd.DataFrame(tmap(itemgetter(0), cursor.fetchall()),
+                      columns=["run_number", "time", "x", "y", "lifetime", "uncertainty"])
+
+    maps = tmap(itemgetter(1), df.groupby("run_number"))
+    return maps
+
+
+def EnergyXY(t_min, t_max, db_file=DATABASE_LOCATION):
+    conn   = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+
+    sqlbaseline = '''select RunNumber MeanTime X Y Energy Uncertainty from EnergyXY
+where (MinTime >= {0} and MaxTime <= {0});'''.format(t_min, t_max)
+    cursor.execute(sqlbaseline)
+    df = pd.DataFrame(tmap(itemgetter(0), cursor.fetchall()),
+                      columns=["run_number", "time", "x", "y", "energy", "uncertainty"])
+
+    maps = tmap(itemgetter(1), df.groupby("run_number"))
+    return maps
