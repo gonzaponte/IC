@@ -96,9 +96,34 @@ def loadDB(dbname='NEWDB'):
 ,  `Probability` float NOT NULL
 );''')
 
+    cursorSql3.execute('''CREATE TABLE IF NOT EXISTS `ElectronLifetimeXY` (
+   `RunNumber`   integer NOT NULL
+,  `MinTime`     integer NOT NULL
+,  `MeanTime`    integer NOT NULL
+,  `MaxTime`     integer NOT NULL
+,  `X`             float NOT NULL
+,  `Y`             float NOT NULL
+,  `Lifetime`      float NOT NULL
+,  `Uncertainty`   float NOT NULL
+);''')
 
-    tables = ['DetectorGeo','PmtBlr','ChannelGain','ChannelMapping','ChannelMask',
-          'PmtNoiseRms','ChannelPosition','SipmBaseline', 'SipmNoisePDF']
+    cursorSql3.execute('''CREATE TABLE IF NOT EXISTS `EnergyXY` (
+   `RunNumber`   integer NOT NULL
+,  `MinTime`     integer NOT NULL
+,  `MeanTime`    integer NOT NULL
+,  `MaxTime`     integer NOT NULL
+,  `X`             float NOT NULL
+,  `Y`             float NOT NULL
+,  `Energy`        float NOT NULL
+,  `Uncertainty`   float NOT NULL
+);''')
+
+
+    tables = ['DetectorGeo',
+              'PmtBlr', 'PmtNoiseRms',
+              'SipmBaseline', 'SipmNoisePDF',
+              'ChannelGain', 'ChannelMapping', 'ChannelMask', 'ChannelPosition',
+              'ElectronLifetimeXY', 'EnergyXY']
 
 
     # Copy all tables

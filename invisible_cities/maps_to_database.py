@@ -10,7 +10,7 @@ from invisible_cities.io.dst_io import load_dst
 
 
 def row_builder(separator, run_number, min_time, mean_time, max_time, x, y, value, uncertainty):
-    values = map(str, (run_number, min_time, mean_time, max_time, x, y, value, uncertainty))
+    values = map(str, (run_number, min_time, max_time, mean_time, x, y, value, uncertainty))
     return separator.join(values)
 
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         run_number = file.root.RunInfo[0][0]
         t_min      = file.root.RunInfo[0][1]
         t_max      = file.root.RunInfo[0][2]
-        t_mean     = (t_min + t_max) // 2
+        t_mean     = int(t_min + t_max) // 2
 
         pitch = file.root.LTMapInfo[0][0]
         x_min = file.root.LTMapInfo[0][1]
