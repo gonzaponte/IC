@@ -4,7 +4,7 @@ import tables as tb
 from pytest import mark
 from pytest import fixture
 
-from .. liquid_cities.components import city
+from .. cities.components import city
 from .. core  .configure   import configure
 
 from . hits_io   import     hits_writer
