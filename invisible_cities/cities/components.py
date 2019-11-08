@@ -44,7 +44,7 @@ from .. filters.s1s2_filter    import pmap_filter
 from .. database               import load_db
 from .. sierpe                 import blr
 from .. io.pmaps_io            import load_pmaps
-from .. io. hits_io            import hits_from_df
+from .. io. hits_io            import hits_from_df_lazy
 from .. io.  dst_io            import load_dst
 from .. types.ic_types         import xy
 from .. types.ic_types         import NN
@@ -286,24 +286,35 @@ def hits_and_kdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCol
         try:
             hits_df = load_dst (path, 'RECO', 'Events')
             kdst_df = load_dst (path, 'DST' , 'Events')
+            hits_df.sort_values(by="event", inplace=True)
+            kdst_df.sort_values(by="event", inplace=True)
         except tb.exceptions.NoSuchNodeError:
             continue
 
         with tb.open_file(path, "r") as h5in:
             try:
-                run_number  = get_run_number(h5in)
-                event_info  = get_event_info(h5in)
+                run_number  = get_run_number  (h5in)
+                event_info  = get_event_info  (h5in)[:];event_info.sort()
                 mc_info     = get_mc_info_safe(h5in, run_number)
             except (tb.exceptions.NoSuchNodeError, IndexError):
                 continue
 
             check_lengths(event_info, hits_df.event.unique())
 
-            for evtinfo in event_info:
-                event_number, timestamp = evtinfo.fetch_all_fields()
-                hits = hits_from_df(hits_df.loc[hits_df.event == event_number])
-                yield dict(hits = hits[event_number], kdst = kdst_df.loc[kdst_df.event==event_number], mc=mc_info, run_number=run_number,
-                           event_number=event_number, timestamp=timestamp)
+            hdst_events = hits_from_df_lazy(hits_df)
+            kdst_events = kdst_df.groupby("event")
+
+            for evtinfo, (evt_no, hits) in zip(event_info, hdst_events):
+                event_number, timestamp = evtinfo
+                assert event_number == evt_no
+
+                kdst_evt = kdst_events.get_group(event_number)
+                yield dict(hits         = hits        ,
+                           kdst         = kdst_evt    ,
+                           mc           = mc_info     ,
+                           run_number   = run_number  ,
+                           event_number = event_number,
+                           timestamp    = timestamp   )
             # NB, the monte_carlo writer is different from the others:
             # it needs to be given the WHOLE TABLE (rather than a
             # single event) at a time.
