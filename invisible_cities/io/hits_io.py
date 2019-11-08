@@ -12,8 +12,10 @@ from .  table_io           import make_table
 from .. evm .nh5           import HitsTable
 from .. types.ic_types     import NN
 
+from typing                import Generator
 
-def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCollection]:
+
+def hits_from_df_lazy(dst : pd.DataFrame, skip_NN : bool = False) -> Generator[HitCollection, None, None]:
     """
     Function that transforms pandas DataFrame dst to HitCollection
     ------
@@ -27,13 +29,12 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
     ------
     Returns
     ------
-    Dictionary {event_number : HitCollection}
+    (event_number, HitCollection)
     """
-    all_events = {}
     for (event, time) , hits_df in dst.groupby(['event', 'time']):
         #pandas is not consistent with numpy dtypes so we have to change it by hand
         event = np.int32(event)
-        hits  = []
+        hc    = HitCollection(event, time)
         for i, row in hits_df.iterrows():
             if skip_NN and row.Q == NN:
                 continue
@@ -43,13 +44,23 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
                       row.Z, row.E, xy(getattr(row, 'Xpeak', -1000) , getattr(row, 'Ypeak', -1000)),
                       s2_energy_c = getattr(row, 'Ec', -1), track_id = getattr(row, 'track_id', -1)) 
 
-            hits.append(hit)
+            hc.hits.append(hit)
 
-        if len(hits)>0:
-            all_events.update({event : HitCollection(event, time)})
-            all_events[event].hits.extend(hits)
+        yield event, hc
 
     return all_events
+
+
+
+def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCollection]:
+    """
+    Read all hits at once.
+    """
+    all_events = {}
+    for event, hc in hits_from_df_lazy(dst, skip_NN):
+        all_events.update({event : hc})
+    return all_events
+
 
 # reader
 def load_hits(DST_file_name : str, group_name : str = 'RECO', table_name : str = 'Events', skip_NN : bool = False
