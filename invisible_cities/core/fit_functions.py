@@ -27,14 +27,14 @@ def fixed_parameters(fn, **kwargs):
     par_gen   = (kwargs.get(k, np.nan) for k in fn_pars)
     all_args  = np.fromiter(par_gen, np.float)
     free_pars = np.isnan(all_args)
-    
+
     if np.all(free_pars):
         raise ValueError(str(kwargs.keys()) + " not parameters " + fn.__name__)
     elif not np.any(free_pars):
         raise ValueError("Fixing all parameters pointless")
     elif np.count_nonzero(free_pars) > len(fn_pars) - len(kwargs):
         raise ValueError("Some parameters not found in " + fn.__name__)
-    
+
     @wraps(fn)
     def fixed_fn(x, *pars):
         all_args[free_pars] = pars
@@ -43,11 +43,11 @@ def fixed_parameters(fn, **kwargs):
         if hasattr(fn, 'n_gaussians'):
             fixed_fn.n_gaussians = fn.n_gaussians
         return func_value
-    
+
     ## Correct the doc string and signature for the new wrapped function
     fixed_fn.__doc__  = fixed_fn.__name__ + str(fixed_fn.__doc__) + "\n"
     fixed_fn.__doc__ += " fixed" + str(fn_pars[np.invert(free_pars)])
-    
+
     new_pars               = np.array(tuple(fn_sig.parameters.values()))
     new_pars               = np.insert(new_pars[1:][free_pars], 0, new_pars[0])
     fixed_fn.__signature__ = fn_sig.replace(parameters=tuple(new_pars))
@@ -110,7 +110,7 @@ def get_chi2_and_pvalue(ydata, yfit, ndf, sigma=None):
 # Functions
 def gauss(x, amp, mu, sigma):
     if sigma <= 0.:
-        return np.inf
+        return np.full_like(x, np.inf)
     return amp/(2*np.pi)**.5/sigma * np.exp(-0.5*(x-mu)**2./sigma**2.)
 
 
