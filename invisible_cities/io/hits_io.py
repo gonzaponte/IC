@@ -29,8 +29,7 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
     ------
     Dictionary {event_number : HitCollection}
     """
-    all_events = {}
-    for (event, time) , hits_df in dst.groupby(['event', 'time']):
+    for (event, time) , hits_df in dst.groupby(['event', 'time'], sort=False):
         #pandas is not consistent with numpy dtypes so we have to change it by hand
         event = np.int32(event)
         hits  = []

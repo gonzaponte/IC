@@ -294,19 +294,28 @@ def hits_and_kdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCol
 
         with tb.open_file(path, "r") as h5in:
             try:
-                run_number  = get_run_number(h5in)
-                event_info  = get_event_info(h5in)
+                run_number  = get_run_number  (h5in)
+                event_info  = get_event_info  (h5in)
                 mc_info     = get_mc_info_safe(h5in, run_number)
             except (tb.exceptions.NoSuchNodeError, IndexError):
                 continue
 
             check_lengths(event_info, hits_df.event.unique())
 
-            for evtinfo in event_info:
+            hdst_events = hits_from_df_lazy(hits_df)
+            kdst_events = kdst_df.groupby("event", sort=False)
+
+            for evtinfo, (evt_no, hits) in zip(event_info, hdst_events):
                 event_number, timestamp = evtinfo.fetch_all_fields()
-                hits = hits_from_df(hits_df.loc[hits_df.event == event_number])
-                yield dict(hits = hits[event_number], kdst = kdst_df.loc[kdst_df.event==event_number], mc=mc_info, run_number=run_number,
-                           event_number=event_number, timestamp=timestamp)
+                assert event_number == evt_no
+
+                kdst_evt = kdst_events.get_group(event_number)
+                yield dict(hits         = hits        ,
+                           kdst         = kdst_evt    ,
+                           mc           = mc_info     ,
+                           run_number   = run_number  ,
+                           event_number = event_number,
+                           timestamp    = timestamp   )
             # NB, the monte_carlo writer is different from the others:
             # it needs to be given the WHOLE TABLE (rather than a
             # single event) at a time.
