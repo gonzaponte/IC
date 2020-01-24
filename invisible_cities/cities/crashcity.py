@@ -62,8 +62,9 @@ def crashcity(files_in, file_out, compression, event_range, print_mod, run_numbe
     
     with tb.open_file(file_out, "w", filters=tbl.filters(compression)) as h5out:
         
-        write_mc_ = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
-        write_mc  = fl.sink(write_mc_ , args=("mc", "event_number"))
+        write_mc_        = mc_info_writer(h5out) if run_number <= 0 else (lambda *_: None)
+        write_mc         = fl.sink(write_mc_ , 
+                                   args=("mc", "event_number"))
 
         write_event_info = fl.sink(run_and_event_writer(h5out), 
                                    args=("run_number", "event_number", "timestamp"))
@@ -84,7 +85,7 @@ def crashcity(files_in, file_out, compression, event_range, print_mod, run_numbe
                              fl.fork(write_kdst_table   ,
                                      write_mc           ,
                                      write_event_info   ,
-                                     write_hits          )),
+                                     write_hits          )          ),
                          
                          result = dict(
                              count_in  = count_in .future,
