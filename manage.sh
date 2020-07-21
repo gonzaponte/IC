@@ -72,7 +72,7 @@ function install_conda {
     fi
 }
 
-CONDA_ENV_TAG=2020-06-16
+CONDA_ENV_TAG=2020-07-21
 CONDA_ENV_NAME=IC-${PYTHON_VERSION}-${CONDA_ENV_TAG}
 
 function make_environment {
@@ -82,6 +82,9 @@ function make_environment {
 
     cat <<EOF > ${YML_FILENAME}
 name: ${CONDA_ENV_NAME}
+channels:
+- defaults
+- conda-forge
 dependencies:
 - python       = ${PYTHON_VERSION}
 # *REMEMBER TO CHANGE CONDA_ENV_TAG WHEN CHANGING VERSION NUMBERS*
@@ -106,6 +109,7 @@ dependencies:
 - coverage     = 5.0
 - pip          = 20.0.2
 - setuptools   = 47.1.1
+- iminuit      = 1.4.9
 - pip:
   - pytest-instafail==0.4.2
 EOF
