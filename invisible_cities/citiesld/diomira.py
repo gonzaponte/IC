@@ -30,6 +30,13 @@ from itertools import compress
 import numpy  as np
 import tables as tb
 
+from liquidata import pipe
+from liquidata import Slice
+from liquidata import get
+from liquidata import put
+from liquidata import out
+from liquidata import star
+
 from .. reco                    import    tbl_functions as tbl
 from .. reco                    import sensor_functions as sf
 from .. reco                    import   peak_functions as pkf
@@ -43,11 +50,9 @@ from .. evm.ic_containers       import TriggerParams
 from .. evm.pmaps               import S2
 from .. types.ic_types          import minmax
 
-from .. dataflow          import dataflow as fl
-
 from .  components import city
+from .  components import counter
 from .  components import print_every
-from .  components import collect
 from .  components import copy_mc_info
 from .  components import sensor_data
 from .  components import deconv_pmt
@@ -68,80 +73,53 @@ def diomira(files_in    , file_out      , compression   ,
 
     sd = sensor_data(files_in[0], WfType.mcrd)
 
-    simulate_pmt_response_  = fl.map(simulate_pmt_response (detector_db,
-                                                            run_number ),
-                                     args="pmt" , out= ("pmt_sim", "blr_sim"))
-    simulate_sipm_response_ = fl.map(simulate_sipm_response(detector_db   ,
-                                                            run_number    ,
-                                                            sd.SIPMWL     ,
-                                                            sipm_noise_cut,
-                                                            filter_padding),
-                                     args="sipm", out="sipm_sim"             )
+    simulate_pmt_response_  = simulate_pmt_response (detector_db, run_number)
+    simulate_sipm_response_ = simulate_sipm_response(detector_db, run_number,
+                                                     sd.SIPMWL              ,
+                                                     sipm_noise_cut         ,
+                                                     filter_padding         )
+
     trigger_filter_         = select_trigger_filter(trigger_type  ,
                                                     trigger_params,
                                                     s2_params     )
-    emulate_trigger_        = fl.map(emulate_trigger(detector_db   ,
-                                                     run_number    ,
-                                                     trigger_type  ,
-                                                     trigger_params,
-                                                     s2_params     ),
-                                     args="pmt_sim", out="trigger_sim"       )
-    trigger_pass            = fl.map(trigger_filter_   ,
-                                     args="trigger_sim",
-                                     out="trigger_pass")
-    trigger_filter          = fl.count_filter(bool, args="trigger_pass")
+    emulate_trigger_        = emulate_trigger(detector_db   ,
+                                              run_number    ,
+                                              trigger_type  ,
+                                              trigger_params,
+                                              s2_params     )
 
     with tb.open_file(file_out, "w", filters=tbl.filters(compression)) as h5out:
         RWF        = partial(rwf_writer, h5out, group_name='RD')
-        write_pmt  = fl.sink(RWF(table_name      = 'pmtrwf',
-                                 n_sensors       = sd.NPMT ,
-                                 waveform_length = sd.PMTWL // int(FE.t_sample)),
-                                 args= "pmt_sim")
-        write_blr  = fl.sink(RWF(table_name      = 'pmtblr',
-                                 n_sensors       = sd.NPMT ,
-                                 waveform_length = sd.PMTWL // int(FE.t_sample)),
-                                 args= "blr_sim")
-        write_sipm = fl.sink(RWF(table_name      = 'sipmrwf',
-                                 n_sensors       = sd.NSIPM ,
-                                 waveform_length = sd.SIPMWL),
-                                 args="sipm_sim")
+        write_pmt  = RWF(table_name      = 'pmtrwf',
+                         n_sensors       = sd.NPMT ,
+                         waveform_length = sd.PMTWL // int(FE.t_sample))
+        write_blr  = RWF(table_name      = 'pmtblr',
+                         n_sensors       = sd.NPMT ,
+                         waveform_length = sd.PMTWL // int(FE.t_sample))
+        write_sipm = RWF(table_name      = 'sipmrwf',
+                         n_sensors       = sd.NSIPM ,
+                         waveform_length = sd.SIPMWL)
 
-        write_event_info_ = run_and_event_writer(h5out)
-        write_evt_filter_ = event_filter_writer (h5out                    ,
-                                                 "trigger"                ,
-                                                 compression = compression)
+        write_event_info = run_and_event_writer(h5out)
+        write_evt_filter = event_filter_writer (h5out, "trigger",
+                                                compression = compression)
 
-        write_event_info = fl.sink(write_event_info_,
-                                   args=("run_number", "event_number",
-                                         "timestamp"                 ))
-        write_evt_filter = fl.sink(write_evt_filter_,
-                                   args=("event_number", "trigger_pass"))
+        diomira = pipe(Slice(*event_range, close_all=True),
+                       [out.events_in(counter, 0)],
+                       print_every(print_mod),
+                       get.pmt     * simulate_pmt_response_ >>              put.pmt_sim.blr_sim,
+                       get.pmt_sim * (emulate_trigger_, trigger_filter_) >> put.trigger_pass   ,
+                       [get.event_number.trigger_pass, star(write_evt_filter)],
+                       {bool : get.trigger_pass},
+                       [out.events_filter(counter, 0)],
+                       get.sipm    * simulate_sipm_response_ >>             put.sipm_sim,
+                       [get.event_number, out.evtnum_list],
+                       [get.pmt_sim, write_pmt],
+                       [get.blr_sim, write_blr],
+                       [get.sipm_sim, write_sipm],
+                       [get.run_number.event_number.timestamp, star(write_event_info)])
 
-        event_count_in = fl.spy_count()
-
-        evtnum_collect = collect()
-
-        result = fl.push(source = wf_from_files(files_in, WfType.mcrd),
-                         pipe   = fl.pipe(fl.slice(*event_range          ,
-                                                   close_all=True)      ,
-                                          event_count_in.spy            ,
-                                          print_every(print_mod)        ,
-                                          simulate_pmt_response_        ,
-                                          emulate_trigger_              ,
-                                          trigger_pass                  ,
-                                          fl.branch(write_evt_filter)   ,
-                                          trigger_filter.filter         ,
-                                          simulate_sipm_response_       ,
-                                          fl.branch("event_number"     ,
-                                                    evtnum_collect.sink),
-                                          fl.fork(write_pmt       ,
-                                                  write_blr       ,
-                                                  write_sipm      ,
-                                                  write_event_info))     ,
-                         result = dict(events_in     = event_count_in.future,
-                                       evtnum_list   = evtnum_collect.future,
-                                       events_filter = trigger_filter.future))
-
+        result = diomira(wf_from_files(files_in, WfType.mcrd))
         if run_number <= 0:
             copy_mc_info(files_in, h5out, result.evtnum_list,
                          detector_db, run_number)
