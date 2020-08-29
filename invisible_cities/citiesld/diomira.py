@@ -58,7 +58,7 @@ from .  components import sensor_data
 from .  components import deconv_pmt
 from .  components import WfType
 from .  components import wf_from_files
-from .  components import simulate_sipm_response
+from .  components import sipm_response_simulator
 from .  components import compute_pe_resolution
 
 
@@ -73,20 +73,19 @@ def diomira(files_in    , file_out      , compression   ,
 
     sd = sensor_data(files_in[0], WfType.mcrd)
 
-    simulate_pmt_response_  = simulate_pmt_response (detector_db, run_number)
-    simulate_sipm_response_ = simulate_sipm_response(detector_db, run_number,
+    simulate_pmt_response  =  pmt_response_simulator(detector_db, run_number)
+    simulate_sipm_response = sipm_response_simulator(detector_db, run_number,
                                                      sd.SIPMWL              ,
                                                      sipm_noise_cut         ,
                                                      filter_padding         )
-
-    trigger_filter_         = select_trigger_filter(trigger_type  ,
-                                                    trigger_params,
-                                                    s2_params     )
-    emulate_trigger_        = emulate_trigger(detector_db   ,
-                                              run_number    ,
-                                              trigger_type  ,
-                                              trigger_params,
-                                              s2_params     )
+    emulate_trigger        =        trigger_emulator(detector_db   ,
+                                                     run_number    ,
+                                                     trigger_type  ,
+                                                     trigger_params,
+                                                     s2_params     )
+    trigger_response       = trigger_filter_selector(trigger_type  ,
+                                                     trigger_params,
+                                                     s2_params     )
 
     with tb.open_file(file_out, "w", filters=tbl.filters(compression)) as h5out:
         RWF        = partial(rwf_writer, h5out, group_name='RD')
@@ -107,17 +106,19 @@ def diomira(files_in    , file_out      , compression   ,
         diomira = pipe(Slice(*event_range, close_all=True),
                        [out.events_in(counter, 0)],
                        print_every(print_mod),
-                       get.pmt     * simulate_pmt_response_ >>              put.pmt_sim.blr_sim,
-                       get.pmt_sim * (emulate_trigger_, trigger_filter_) >> put.trigger_pass   ,
-                       [get.event_number.trigger_pass, star(write_evt_filter)],
-                       {bool : get.trigger_pass},
+                       get.pmt     * simulate_pmt_response               >> put.pmt_sim.blr_sim,
+                       get.pmt_sim * (emulate_trigger, trigger_response) >> put.triggered      ,
+                       [get.event_number.triggered, sink(star(write_evt_filter))],
+
+                       {bool : get.triggered},
                        [out.events_filter(counter, 0)],
-                       get.sipm    * simulate_sipm_response_ >>             put.sipm_sim,
                        [get.event_number, out.evtnum_list],
-                       [get.pmt_sim, write_pmt],
-                       [get.blr_sim, write_blr],
-                       [get.sipm_sim, write_sipm],
-                       [get.run_number.event_number.timestamp, star(write_event_info)])
+
+                       get.sipm    * simulate_sipm_response              >> put.sipm_sim,
+                       [get.pmt_sim , sink(write_pmt )],
+                       [get.blr_sim , sink(write_blr )],
+                       [get.sipm_sim, sink(write_sipm)],
+                       [get.run_number.event_number.timestamp, sink(star(write_event_info))])
 
         result = diomira(wf_from_files(files_in, WfType.mcrd))
         if run_number <= 0:
@@ -127,7 +128,7 @@ def diomira(files_in    , file_out      , compression   ,
         return result
 
 
-def simulate_pmt_response(detector, run_number):
+def pmt_response_simulator(detector, run_number):
     datapmt       = load_db.DataPMT(detector, run_number)
     adc_to_pes    = np.abs(datapmt.adc_to_pes.values).astype(np.double)
     single_pe_rms = datapmt.Sigma.values.astype(np.double)
@@ -141,8 +142,7 @@ def simulate_pmt_response(detector, run_number):
     return simulate_pmt_response
 
 
-
-def select_trigger_filter(trigger_type, trigger_params, s2_params):
+def trigger_filter_selector(trigger_type, trigger_params, s2_params):
     if   trigger_type is None:
         def always_pass(*args):
             return True
@@ -169,7 +169,7 @@ def select_trigger_filter(trigger_type, trigger_params, s2_params):
         raise ValueError(f"Invalid trigger type: {repr(trigger_type)}")
 
 
-def emulate_trigger(detector_db, run_number, trigger_type, trigger_params, s2_params):
+def trigger_emulator(detector_db, run_number, trigger_type, trigger_params, s2_params):
     if   trigger_type is None:
         def do_nothing(*args, **kwargs):
             pass

@@ -484,7 +484,7 @@ def compute_pe_resolution(rms, adc_to_pes):
                      where = adc_to_pes != 0          )
 
 
-def simulate_sipm_response(detector, run_number, wf_length, noise_cut, filter_padding):
+def sipm_response_simulator(detector, run_number, wf_length, noise_cut, filter_padding):
     datasipm      = load_db.DataSiPM (detector, run_number)
     baselines     = load_db.SiPMNoise(detector, run_number)[-1]
     noise_sampler = NoiseSampler(detector, run_number, wf_length, True)
