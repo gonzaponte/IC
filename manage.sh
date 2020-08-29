@@ -73,7 +73,7 @@ function install_conda {
     fi
 }
 
-CONDA_ENV_TAG=2020-06-16
+CONDA_ENV_TAG=liquidata
 CONDA_ENV_NAME=IC-${PYTHON_VERSION}-${CONDA_ENV_TAG}
 
 function make_environment {
@@ -109,6 +109,7 @@ dependencies:
 - setuptools   = 47.1.1
 - pip:
   - pytest-instafail==0.4.2
+  - liquidata==0.1.1
 EOF
 
     conda env create -f ${YML_FILENAME}
