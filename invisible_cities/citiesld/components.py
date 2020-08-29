@@ -20,6 +20,7 @@ import inspect
 import warnings
 
 from liquidata import put
+from liquidata import out
 from liquidata import get
 from liquidata import sink
 from liquidata import Slice
@@ -683,44 +684,28 @@ def compute_and_write_pmaps(detector_db, run_number, pmt_samp_wid, sipm_samp_wid
                   s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2,
                   h5out, compression, sipm_rwf_to_cal=None):
 
-    # Filter events without signal over threshold
-    indices_pass    = fl.map(check_nonempty_indices,
-                             args = ("s1_indices", "s2_indices"),
-                             out = "indices_pass")
-    empty_indices   = fl.count_filter(bool, args = "indices_pass")
-
     # Build the PMap
-    compute_pmap     = fl.map(build_pmap(detector_db, run_number, pmt_samp_wid, sipm_samp_wid,
-                                         s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
-                                         s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2),
-                              args = ("ccwfs", "s1_indices", "s2_indices", "sipm"),
-                              out  = "pmap")
-
-    # Filter events with zero peaks
-    pmaps_pass      = fl.map(check_empty_pmap, args = "pmap", out = "pmaps_pass")
-    empty_pmaps     = fl.count_filter(bool, args = "pmaps_pass")
-
+    compute_pmap     = build_pmap(detector_db, run_number, pmt_samp_wid, sipm_samp_wid,
+                                  s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
+                                  s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2)
     # Define writers...
-    write_pmap_         = pmap_writer        (h5out,                compression=compression)
-    write_indx_filter_  = event_filter_writer(h5out, "s12_indices", compression=compression)
-    write_pmap_filter_  = event_filter_writer(h5out, "empty_pmap" , compression=compression)
+    write_pmap         = pmap_writer        (h5out,                compression=compression)
+    write_indx_filter  = event_filter_writer(h5out, "s12_indices", compression=compression)
+    write_pmap_filter  = event_filter_writer(h5out, "empty_pmap" , compression=compression)
 
-    # ... and make them sinks
-    write_pmap         = sink(write_pmap_        , args=(        "pmap", "event_number"))
-    write_indx_filter  = sink(write_indx_filter_ , args=("event_number", "indices_pass"))
-    write_pmap_filter  = sink(write_pmap_filter_ , args=("event_number",   "pmaps_pass"))
-
-    fn_list = (indices_pass,
-               fl.branch(write_indx_filter),
-               empty_indices.filter,
+    fn_list = (get.s1_indices.s2_indices * check_nonempty_indices >> put.indices_pass,
+               [get.event_number.indices_pass, star(write_indx_filter)],
+               {bool: get.indices_pass},
+               [out.over_thr(counter, 0)],
                sipm_rwf_to_cal,
-               compute_pmap,
-               pmaps_pass,
-               fl.branch(write_pmap_filter),
-               empty_pmaps.filter,
-               fl.branch(write_pmap))
+               get.ccwfs.s1_indices.s2_indices.sipm * compute_pmap >> put.pmap,
+               get.pmap * check_empty_pmap >> put.pmaps_pass,
+               [get.event_number.pmaps_pass, star(write_pmap_filter)],
+               {bool: get.pmaps_pass},
+               [out.full_pmap(counter, 0)],
+               [get.pmap.event_number, star(write_pmap)])
 
     # Filter out simp_rwf_to_cal if it is not set
-    compute_pmaps = pipe(*filter(None, fn_list))
+    compute_pmaps = tuple(filter(None, fn_list))
 
-    return compute_pmaps, empty_indices, empty_pmaps
+    return compute_pmaps
