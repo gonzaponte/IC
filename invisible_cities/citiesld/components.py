@@ -12,15 +12,19 @@ from typing      import Mapping
 from typing      import List
 from typing      import Dict
 from typing      import Union
+
 import tables as tb
 import numpy  as np
 import pandas as pd
 import inspect
 import warnings
 
-from .. dataflow                  import                  dataflow as  fl
-from .. dataflow.dataflow         import                      sink
-from .. dataflow.dataflow         import                      pipe
+from liquidata import put
+from liquidata import get
+from liquidata import sink
+from liquidata import Slice
+from liquidata import star
+
 from .. evm    .ic_containers     import                SensorData
 from .. evm    .event_model       import                   KrEvent
 from .. evm    .event_model       import                       Hit
@@ -140,31 +144,25 @@ def event_range(conf):
     else                                          : return er
 
 
-def print_every(N):
+def indexer(name="index"):
     counter = count()
-    return fl.branch(fl.map  (lambda _: next(counter), args="event_number", out="index"),
-                     fl.slice(None, None, N),
-                     fl.sink (lambda data: print(f"events processed: {data['index']}, event number: {data['event_number']}")))
+    def get_index(_):
+        return next(counter)
+
+    return (get_index >> getattr(put, name))
 
 
-def print_every_alternative_implementation(N):
-    @fl.coroutine
-    def print_every_loop(target):
-        with fl.closing(target):
-            for i in count():
-                data = yield
-                if not i % N:
-                    print(f"events processed: {i}, event number: {data['event_number']}")
-                target.send(data)
-    return print_every_loop
+def counter(acc, _):
+    return acc + 1
 
 
-def collect():
-    """Return a future/sink pair for collecting streams into a list."""
-    def append(l,e):
-        l.append(e)
-        return l
-    return fl.reduce(append, initial=[])()
+def print_every(N):
+    def print_msg(n, evt):
+        print(f"events processed: {n}, event number: {evt}")
+    return [indexer("pe_index"),
+            Slice(None, None, N),
+            get.pe_index.event_number,
+            sink(star(print_msg))]
 
 
 def copy_mc_info(files_in     : List[str],
@@ -306,9 +304,9 @@ def wf_from_files(paths, wf_type):
                 event_number, timestamp         = evtinfo.fetch_all_fields()
                 if trtype  is not None: trtype  = trtype .fetch_all_fields()[0]
 
-                yield dict(pmt=pmt, sipm=sipm, run_number=run_number,
-                           event_number=event_number, timestamp=timestamp,
-                           trigger_type=trtype, trigger_channels=trchann)
+                yield Namespace(pmt=pmt, sipm=sipm, run_number=run_number,
+                                event_number=event_number, timestamp=timestamp,
+                                trigger_type=trtype, trigger_channels=trchann)
 
 
 def pmap_from_files(paths):
@@ -331,8 +329,8 @@ def pmap_from_files(paths):
 
             for evtinfo in event_info:
                 event_number, timestamp = evtinfo.fetch_all_fields()
-                yield dict(pmap=pmaps[event_number], run_number=run_number,
-                           event_number=event_number, timestamp=timestamp)
+                yield Namespace(pmap=pmaps[event_number], run_number=run_number,
+                                event_number=event_number, timestamp=timestamp)
 
 
 def cdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[pd.DataFrame, MCInfo, int, float]]]:
@@ -357,13 +355,11 @@ def cdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[pd.DataFrame, M
             check_lengths(event_info, cdst_df.event.unique())
             for evtinfo in event_info:
                 event_number, timestamp = evtinfo
-                yield dict(cdst    = cdst_df   .loc[cdst_df   .event==event_number],
-                           summary = summary_df.loc[summary_df.event==event_number],
-                           run_number=run_number,
-                           event_number=event_number, timestamp=timestamp)
-            # NB, the monte_carlo writer is different from the others:
-            # it needs to be given the WHOLE TABLE (rather than a
-            # single event) at a time.
+                yield Namespace(cdst    = cdst_df   .loc[cdst_df   .event==event_number],
+                                summary = summary_df.loc[summary_df.event==event_number],
+                                run_number=run_number,
+                                event_number=event_number, timestamp=timestamp)
+
 
 def hits_and_kdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCollection, pd.DataFrame, MCInfo, int, float]]]:
     """Reader of the files, yields HitsCollection, pandas DataFrame with
@@ -387,11 +383,11 @@ def hits_and_kdst_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCol
             for evtinfo in event_info:
                 event_number, timestamp = evtinfo.fetch_all_fields()
                 hits = hits_from_df(hits_df.loc[hits_df.event == event_number])
-                yield dict(hits = hits[event_number],
-                           kdst = kdst_df.loc[kdst_df.event==event_number],
-                           run_number = run_number,
-                           event_number = event_number,
-                           timestamp = timestamp)
+                yield Namespace(hits = hits[event_number],
+                                kdst = kdst_df.loc[kdst_df.event==event_number],
+                                run_number = run_number,
+                                event_number = event_number,
+                                timestamp = timestamp)
 
 
 def sensor_data(path, wf_type):
