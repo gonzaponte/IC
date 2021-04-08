@@ -1,7 +1,7 @@
 IC: Invisible Cities
 ==============================================
 
-IC stands for Invisible Cities and also for Italo Calvino, the author of the master piece. 
+IC stands for Invisible Cities and also for Italo Calvino, the author of the master piece.
 
 Quickstart guide
 ----------------
@@ -37,8 +37,6 @@ If you check out a commit which requires an older set of dependencies,
 the :code:`compile_and_test` commands will automatically switch to an
 appropriate environment, creating it on the fly if necessary.
 
-:Travis CI: |travis|
+[![Test suite](https://github.com/next-exp/IC/actions/workflows/test_suite.yml/badge.svg)](https://github.com/next-exp/IC/actions/workflows/test_suite.yml)
 
-.. |travis| image:: https://img.shields.io/travis/nextic/IC.png
-        :target: https://travis-ci.org/nextic/IC
-
+[![Calibration check](https://github.com/next-exp/IC/actions/workflows/check_db_calibration.yml/badge.svg)](https://github.com/next-exp/IC/actions/workflows/check_db_calibration.yml)
