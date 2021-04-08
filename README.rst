@@ -37,6 +37,6 @@ If you check out a commit which requires an older set of dependencies,
 the :code:`compile_and_test` commands will automatically switch to an
 appropriate environment, creating it on the fly if necessary.
 
-[![Test suite](https://github.com/gonzaponte/IC/actions/workflows/test_suite.yml/badge.svg)](https://github.com/gonzaponte/IC/actions/workflows/test_suite.yml)
+[![Test suite](https://github.com/gonzaponte/IC/actions/workflows/test_suite.yml/badge.svg) ](https://github.com/gonzaponte/IC/actions/workflows/test_suite.yml)
 
 [![Calibration check](https://github.com/gonzaponte/IC/actions/workflows/check_db_calibration.yml/badge.svg)](https://github.com/gonzaponte/IC/actions/workflows/check_db_calibration.yml)
