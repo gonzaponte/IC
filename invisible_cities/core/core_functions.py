@@ -7,6 +7,7 @@ import time
 from enum import auto
 
 import numpy as np
+import pandas as pd
 
 from typing import Sequence
 from typing import Tuple
@@ -355,3 +356,9 @@ def find_nearest(array : np.ndarray,
     """
     idx = (np.abs(array - value)).argmin()
     return array[idx]
+
+
+def str_df_from_dict(variables):
+    str_variables      = {k : str(v) for k, v in variables.items()}
+    parameters, values = zip(*str_variables.items())
+    return pd.DataFrame(dict(parameter=parameters, value=values))
