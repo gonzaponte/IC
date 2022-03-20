@@ -1,4 +1,6 @@
 import re
+import string
+
 from time      import sleep
 from functools import partial
 
@@ -14,6 +16,13 @@ from flaky                  import flaky
 from hypothesis             import given
 from hypothesis.strategies  import integers
 from hypothesis.strategies  import floats
+from hypothesis.strategies  import booleans
+from hypothesis.strategies  import text
+from hypothesis.strategies  import none
+from hypothesis.strategies  import one_of
+from hypothesis.strategies  import dictionaries
+from hypothesis.strategies  import tuples
+from hypothesis.strategies  import lists
 from hypothesis.strategies  import sampled_from
 from hypothesis.strategies  import composite
 from hypothesis.extra.numpy import arrays
@@ -385,3 +394,26 @@ def test_find_nearest(x, value):
 
     idx = np.argwhere(dmin==diff)[0]
     assert x[idx] == nearest
+
+
+
+_sensible_characters = string.ascii_letters + string.digits + "_"
+@given(d = dictionaries( keys     = text( alphabet = _sensible_characters
+                                        , min_size = 1
+                                        , max_size = 20
+                                        ).filter(lambda x: x[0].isalpha())
+                       , values   = one_of( text(max_size=20)
+                                          , integers()
+                                          , floats()
+                                          , tuples(integers(), floats())
+                                          , lists(floats(), max_size=3)
+                                          , none()
+                                          , booleans()
+                                          , arrays(float, 10, elements=floats(min_value=-10, max_value=10))
+                                          )
+                       , min_size = 1))
+def test_str_df_from_dict(d):
+    df = core.str_df_from_dict(d).set_index("parameter")
+    for k, v in d.items():
+        assert k in df.index.values
+        assert str(v) == df.value.at[k]
