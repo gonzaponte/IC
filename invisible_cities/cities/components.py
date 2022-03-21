@@ -118,7 +118,8 @@ def city(city_function):
         result = city_function(**vars(conf))
         index_tables(conf.file_out)
         write_config(conf.file_out, vars(conf), city_function.__name__)
-        copy_config (conf.files_in[0], conf.file_out)
+        if len(conf.files_in):
+            copy_config(conf.files_in[0], conf.file_out)
         return result
     return proxy
 
