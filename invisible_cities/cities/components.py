@@ -66,6 +66,8 @@ from .. io     .pmaps_io          import               pmap_writer
 from .. io     .rwf_io            import             buffer_writer
 from .. io     .mcinfo_io         import            load_mchits_df
 from .. io     .dst_io            import                 df_writer
+from .. io     .config_io         import              write_config
+from .. io     .config_io         import               copy_config
 from .. types  .ic_types          import                        xy
 from .. types  .ic_types          import                        NN
 from .. types  .ic_types          import                       NNN
@@ -115,6 +117,8 @@ def city(city_function):
 
         result = city_function(**vars(conf))
         index_tables(conf.file_out)
+        write_config(conf.file_out, vars(conf), city_function.__name__)
+        copy_config (conf.files_in[0], conf.file_out)
         return result
     return proxy
 

@@ -6,8 +6,8 @@ from importlib import import_module
 from pytest import mark
 from .. core.configure      import configure
 
-all_cities = ("beersheba berenice buffy detsim diomira"
-              "dorothea esmeralda eutropia hypathia irene"
+all_cities = ("beersheba berenice buffy detsim diomira "
+              "dorothea esmeralda eutropia hypathia irene "
               "isaura isidora penthesilea phyllis trude").split()
 
 lsc_cities = "irene dorothea penthesilea esmeralda beersheba".split()
