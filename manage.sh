@@ -8,15 +8,9 @@ ARGUMENT=$2
 
 case $COMMAND in
     run_tests_par | compile_and_test_par)     N_PROC=${ARGUMENT:-auto} ;;
-    *)                                PYTHON_VERSION=${ARGUMENT}       ;;
 esac
 
-# If PYTHON_VERSION was not specified as an argument, deduce it from
-# the conda environment
-
-if [[ $PYTHON_VERSION = "" ]]; then
-    PYTHON_VERSION=${CONDA_DEFAULT_ENV:3:3}
-fi
+PYTHON_VERSION=3.10
 
 function install_and_check {
     install
