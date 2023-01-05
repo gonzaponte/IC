@@ -1,14 +1,24 @@
 #!/usrbin/env bash
 
 COMMAND=$1
-ARGUMENT=$2
+shift
 
-## Interpret meaning of command line argument depending on which
-## function will receive it.
-
-case $COMMAND in
-    run_tests_par | compile_and_test_par)     N_PROC=${ARGUMENT:-auto} ;;
-esac
+while test $# -gt 0; do
+  case "$1" in
+    -n)
+      shift
+      N_PROC=$1
+      shift
+      ;;
+    --skip-db)
+      shift
+      SKIP_DB_TESTS=--ignore=$PWD/invisible_cities/database
+      ;;
+    *)
+      echo "Argument not recognized: $1"
+      ;;
+  esac
+done
 
 PYTHON_VERSION=3.10
 
@@ -164,15 +174,15 @@ function ensure_environment_matches_checked_out_version {
 function run_tests {
     ensure_environment_matches_checked_out_version
     # Run the test suite
-    pytest --instafail --no-success-flaky-report
+    pytest $SKIP_DB_TESTS --instafail --no-success-flaky-report
 }
 
 function run_tests_par {
     ensure_environment_matches_checked_out_version
     # Run the test suite
     STATUS=0
-    pytest --instafail -n ${N_PROC:-auto} -m "not serial" --no-success-flaky-report || STATUS=$?
-    pytest --instafail                    -m      serial  --no-success-flaky-report || STATUS=$?
+    pytest $SKIP_DB_TESTS --instafail -n ${N_PROC:-auto} -m "not serial" --no-success-flaky-report || STATUS=$?
+    pytest $SKIP_DB_TESTS --instafail                    -m      serial  --no-success-flaky-report || STATUS=$?
     [[ $STATUS = 0 ]]
 }
 
@@ -265,16 +275,16 @@ case $COMMAND in
        echo
        echo Usage:
        echo
-       echo "source $THIS install_and_check X.Y"
-       echo "source $THIS install X.Y"
-       echo "source $THIS work_in_python_version X.Y"
-       echo "source $THIS work_in_python_version_no_tests X.Y"
-       echo "source $THIS switch_to_conda_env X.Y"
-       echo "bash   $THIS make_environment X.Y"
-       echo "bash   $THIS run_tests"
-       echo "bash   $THIS run_tests_par"
-       echo "bash   $THIS compile_and_test"
-       echo "bash   $THIS compile_and_test_par"
+       echo "source $THIS install_and_check [-n n] [--skip-db]"
+       echo "source $THIS install"
+       echo "source $THIS work_in_python_version [-n n] [--skip-db]"
+       echo "source $THIS work_in_python_version_no_tests"
+       echo "source $THIS switch_to_conda_env"
+       echo "bash   $THIS make_environment"
+       echo "bash   $THIS run_tests [--skip-db]"
+       echo "bash   $THIS run_tests_par [-n n] [--skip-db]"
+       echo "bash   $THIS compile_and_test [--skip-db]"
+       echo "bash   $THIS compile_and_test_par [-n n] [--skip-db]"
        echo "bash   $THIS download_test_db"
        echo "bash   $THIS clean"
        echo "bash   $THIS show_ic_env"
