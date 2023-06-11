@@ -35,6 +35,7 @@ from .. core.configure         import       OneOrManyFiles
 from .. core.configure         import    check_annotations
 from .. evm .event_model       import        HitCollection
 from .. reco                   import        tbl_functions as tbl
+from .. reco.hits_functions    import        merge_NN_hits
 from .. reco.corrections       import            read_maps
 from .. reco.corrections       import apply_all_correction
 from .. reco.corrections       import get_df_to_z_converter
@@ -57,11 +58,20 @@ from .  components import       peak_classifier
 from .  components import   compute_xy_position
 from .  components import       pmap_from_files
 from .  components import         sipms_as_hits
-from .  components import           hits_merger
 from .  components import               collect
 from .  components import build_pointlike_event as pointlike_event_builder
 
 from typing import Callable
+
+
+
+@check_annotations
+def hits_merger(same_peak : bool) -> Callable:
+    def merge_hits(hc : HitCollection) -> HitCollection:
+        merged_hits = merge_NN_hits(hc.hits, same_peak)
+        return HitCollection(hc.event, hc.time, merged_hits)
+
+    return merge_hits
 
 
 @check_annotations

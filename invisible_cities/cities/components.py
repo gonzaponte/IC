@@ -1391,15 +1391,6 @@ def compute_and_write_tracks_info(paolina_params, h5out,
 
 
 @check_annotations
-def hits_merger(same_peak : bool) -> Callable:
-    def merge_hits(hc : HitCollection) -> HitCollection:
-        merged_hits = hif.merge_NN_hits(hc.hits, same_peak)
-        return HitCollection(hc.event, hc.time, merged_hits)
-
-    return merge_hits
-
-
-@check_annotations
 def hits_thresholder(threshold_charge : float, same_peak : bool ) -> Callable:
     """
     Applies a threshold to hits and redistributes the charge/energy.
