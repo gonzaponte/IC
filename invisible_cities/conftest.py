@@ -9,8 +9,6 @@ from . core              import system_of_units as units
 from . io   . pmaps_io   import load_pmaps_as_df
 from . io   . pmaps_io   import load_pmaps
 from . io   .   dst_io   import load_dst
-from . io   .  hits_io   import load_hits
-from . io   .  hits_io   import load_hits_skipping_NN
 from . io   .mcinfo_io   import load_mchits_df
 from . types.ic_types    import NN
 from . types.symbols     import ALL_SYMBOLS
