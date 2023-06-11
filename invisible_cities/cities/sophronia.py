@@ -30,16 +30,23 @@ The tasks performed are:
  - (Optional) apply energy corrections to the hits
 """
 
-from operator import attrgetter
+import os
 
+from operator  import attrgetter
+from functools import partial
+
+import numpy  as np
 import tables as tb
+import pandas as pd
 
-from .. core.configure import    EventRangeType
-from .. core.configure import    OneOrManyFiles
-from .. core.configure import check_annotations
-from .. reco           import     tbl_functions as tbl
-
-from .. evm .event_model       import        HitCollection
+from .. core.configure         import       EventRangeType
+from .. core.configure         import       OneOrManyFiles
+from .. core.configure         import    check_annotations
+from .. reco                   import        tbl_functions as tbl
+from .. reco.hits_functions    import        merge_NN_hits
+from .. reco.corrections       import            read_maps
+from .. reco.corrections       import apply_all_correction
+from .. reco.corrections       import get_df_to_z_converter
 from .. io  .          hits_io import          hits_writer
 from .. io  . run_and_event_io import run_and_event_writer
 from .. io  .          kdst_io import            kr_writer
@@ -67,11 +74,50 @@ from .  components import        hits_corrector
 from .  components import              identity
 
 from typing import Optional
+from typing import Callable
 
 
 @check_annotations
-def count_valid_hits(hitc : HitCollection):
-    return sum(1 for hit in hitc.hits if hit.Q != NN)
+def hits_merger(same_peak : bool) -> Callable:
+    return partial(merge_NN_hits, same_peak=same_peak)
+
+
+@check_annotations
+def hits_corrector(map_fname : str, apply_temp : bool) -> Callable:
+    """
+    Applies energy correction map and converts drift time to z.
+
+    Parameters
+    ----------
+    map_fname  : string (filepath)
+        filename of the map
+    apply_temp : bool
+        whether to apply temporal corrections
+        must be set to False if no temporal correction dataframe exists in map file
+
+    Returns
+    ----------
+    A function that takes a pd.DataFrame as input and returns
+    the same object with modified Ec and Z fields.
+    """
+    map_fname = os.path.expandvars(map_fname)
+    maps      = read_maps(map_fname)
+    get_coef  = apply_all_correction(maps, apply_temp = apply_temp, norm_strat = NormStrategy.kr)
+    time_to_Z = (get_df_to_z_converter(maps) if maps.t_evol is not None else
+                 lambda x: x)
+
+    def correct(hits : pd.DataFrame) -> pd.DataFrame:
+        corr = get_coef(hits.X, hits.Y, hits.Z, hits.time)
+        return hits.assign( Z  = time_to_Z(hits.Z)
+                          , Ec = hits.E * corr)
+
+    return correct
+
+
+@check_annotations
+def count_valid_hits(hits : pd.DataFrame):
+    # TODO: replace NN by nans
+    return np.count_nonzero(hits.Q.values != NN)
 
 
 @city
