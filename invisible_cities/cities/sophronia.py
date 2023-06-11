@@ -26,14 +26,16 @@ The tasks performed are:
 
 import os
 
-from operator import attrgetter
+from operator  import attrgetter
+from functools import partial
 
+import numpy  as np
 import tables as tb
+import pandas as pd
 
 from .. core.configure         import       EventRangeType
 from .. core.configure         import       OneOrManyFiles
 from .. core.configure         import    check_annotations
-from .. evm .event_model       import        HitCollection
 from .. reco                   import        tbl_functions as tbl
 from .. reco.hits_functions    import        merge_NN_hits
 from .. reco.corrections       import            read_maps
@@ -67,11 +69,7 @@ from typing import Callable
 
 @check_annotations
 def hits_merger(same_peak : bool) -> Callable:
-    def merge_hits(hc : HitCollection) -> HitCollection:
-        merged_hits = merge_NN_hits(hc.hits, same_peak)
-        return HitCollection(hc.event, hc.time, merged_hits)
-
-    return merge_hits
+    return partial(merge_NN_hits, same_peak=same_peak)
 
 
 @check_annotations
@@ -89,7 +87,7 @@ def hits_corrector(map_fname : str, apply_temp : bool) -> Callable:
 
     Returns
     ----------
-    A function that takes a HitCollection as input and returns
+    A function that takes a pd.DataFrame as input and returns
     the same object with modified Ec and Z fields.
     """
     map_fname = os.path.expandvars(map_fname)
@@ -98,19 +96,18 @@ def hits_corrector(map_fname : str, apply_temp : bool) -> Callable:
     time_to_Z = (get_df_to_z_converter(maps) if maps.t_evol is not None else
                  lambda x: x)
 
-    def correct(hitc : HitCollection) -> HitCollection:
-        for hit in hitc.hits:
-            corr    = get_coef([hit.X], [hit.Y], [hit.Z], hitc.time)[0]
-            hit.Ec  = hit.E * corr
-            hit.xyz = (hit.X, hit.Y, time_to_Z(hit.Z)) # ugly, but temporary
-        return hitc
+    def correct(hits : pd.DataFrame) -> pd.DataFrame:
+        corr = get_coef(hits.X, hits.Y, hits.Z, hits.time)
+        return hits.assign( Z  = time_to_Z(hits.Z)
+                          , Ec = hits.E * corr)
 
     return correct
 
 
 @check_annotations
-def count_valid_hits(hitc : HitCollection):
-    return sum(1 for hit in hitc.hits if hit.Q != NN)
+def count_valid_hits(hits : pd.DataFrame):
+    # TODO: replace NN by nans
+    return np.count_nonzero(hits.Q.values != NN)
 
 
 @city
