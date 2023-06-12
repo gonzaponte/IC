@@ -58,12 +58,9 @@ from .. io.run_and_event_io import run_and_event_writer
 
 
 def hit_dropper(radius : float):
-    def in_fiducial(hit : evm.Hit) -> bool:
-        return hit.R < radius
-
-    def drop_hits(hitc : evm.HitCollection) -> evm.HitCollection:
-        hitc.hits = list(filter(in_fiducial, hitc.hits))
-        return hitc
+    def drop_hits(hits : pd.DataFrame) -> pd.DataFrame:
+        sel = hits.R < radius
+        return hits.loc[sel]
 
     return drop_hits
 
