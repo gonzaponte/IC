@@ -105,5 +105,7 @@ def test_threshold_hits_energy_conserved(hits, th, on_corrected):
 @given(hits=list_of_hits(), th=floats())
 def test_threshold_hits_all_larger_than_th(hits, th, on_corrected):
     hits_thresh  = threshold_hits(hits, th, on_corrected = on_corrected)
-    assert (h.Q  > th or h.Q  == NN for h in hits_thresh)
-    assert (h.Qc > th or h.Qc == NN for h in hits_thresh)
+    if on_corrected:
+        assert (h.Qc > th or h.Qc == NN for h in hits_thresh)
+    else:
+        assert (h.Q  > th or h.Q  == NN for h in hits_thresh)
