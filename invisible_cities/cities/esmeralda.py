@@ -36,6 +36,7 @@ from .  components import city
 from .  components import print_every
 from .  components import collect
 from .  components import copy_mc_info
+from .  components import check_annotations
 from .  components import hits_and_kdst_from_files
 from .  components import hits_thresholder
 from .  components import compute_and_write_tracks_info
@@ -45,6 +46,7 @@ from .. io.         kdst_io import kdst_from_df_writer
 from .. io.run_and_event_io import run_and_event_writer
 
 
+@check_annotations
 def hit_dropper(radius : float):
     def in_fiducial(hit : evm.Hit) -> bool:
         return hit.R < radius
