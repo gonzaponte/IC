@@ -521,14 +521,23 @@ def pmap_from_files(paths):
 @check_annotations
 def hits_and_kdst_from_files( paths : List[str]
                             , group : str
-                            , node  : str ) -> Iterator[Dict[str,Union[HitCollection, pd.DataFrame, MCInfo, int, float]]]:
-    """Reader of the files, yields HitsCollection, pandas DataFrame with
-    kdst info, run_number, event_number and timestamp."""
+                            , node  : str ) -> Iterator[Dict[str, Union[pd.DataFrame, int, float]]]:
+    """
+        Reader of hits files. Yields a dictionary with
+        - hits         : a DataFrame with hits
+        - kdst         : a DataFrame with a pointlike event summary
+        - run_number   : the run number
+        - event_number : the event number
+        - timestamp    : the timestamp of the event
+    """
     for path in paths:
         try:
             hits_df = load_dst (path, group, node)
             kdst_df = load_dst (path, 'DST' , 'Events')
-        except tb.exceptions.NoSuchNodeError:
+        except tb.exceptions.NoSuchNodeError as e:
+            print(f"Error on file {path}:")
+            print(e)
+            print("----------------------")
             continue
 
         with tb.open_file(path, "r") as h5in:
@@ -542,12 +551,12 @@ def hits_and_kdst_from_files( paths : List[str]
 
             for evtinfo in event_info:
                 event_number, timestamp = evtinfo.fetch_all_fields()
-                hits = hits_from_df(hits_df.loc[hits_df.event == event_number])
-                yield dict(hits = hits[event_number],
-                           kdst = kdst_df.loc[kdst_df.event==event_number],
-                           run_number = run_number,
+                this_event = lambda df: df.event == event_number
+                yield dict(hits         = hits_df.loc[this_event],
+                           kdst         = kdst_df.loc[this_event],
+                           run_number   = run_number,
                            event_number = event_number,
-                           timestamp = timestamp)
+                           timestamp    = timestamp)
 
 
 @check_annotations
