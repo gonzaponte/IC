@@ -18,7 +18,7 @@ from hypothesis.strategies     import composite
 
 
 @composite
-def hit(draw):
+def hit(draw, event=0):
     x      = draw(floats  (   1,   5))
     y      = draw(floats  ( -10,  10))
     z      = draw(floats  (  50, 100))
@@ -30,7 +30,8 @@ def hit(draw):
     peak_y = draw(floats  ( -10,  10))
     assume(abs(qc - q) > 1e-3)
 
-    hit = dict( npeak = 0
+    hit = dict( event = event
+              , npeak = 0
               , Xpeak = peak_x
               , Ypeak = peak_y
               , X     = x
@@ -44,9 +45,10 @@ def hit(draw):
 
 
 @composite
-def hits(draw):
-    hits = draw(lists(hit(), min_size=2, max_size=10))
-    hits = pd.concat(hits, ignore_index = True)
+def hits(draw, min_hits=2, max_hits=10):
+    event = draw(integers(0, np.iinfo(np.int64).max))
+    hits  = draw(lists(hit(event), min_size=min_hits, max_size=max_hits))
+    hits  = pd.concat(hits, ignore_index = True)
     assume(hits.Q [hits.Q  > 0].sum() >= 1)
     assume(hits.Qc[hits.Qc > 0].sum() >= 1)
     return hits
@@ -54,8 +56,8 @@ def hits(draw):
 
 @composite
 def thresholds(draw, min_value=1, max_value=1):
-    th1 = draw (integers(  10   ,  20))
-    th2 = draw (integers(  th1+1,  30))
+    th1 = draw(integers(10   , 20))
+    th2 = draw(integers(th1+1, 30))
     return th1, th2
 
 
