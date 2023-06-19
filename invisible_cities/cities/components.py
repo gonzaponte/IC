@@ -1239,27 +1239,18 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
 
     Returns
     ----------
-    A function that from a given HitCollection returns a pandas DataFrame with per track information.
+    A function that from a given DataFrame returns another DataFrame with per track information.
     """
-    def create_extract_track_blob_info(hitc):
-        df = pd.DataFrame(columns=list(types_dict_tracks.keys()))
-        if len(hitc.hits) > max_num_hits:
-            return df, hitc, True
-        #track_hits is a new Hitcollection object that contains hits belonging to tracks, and hits that couldnt be corrected
-        track_hitc = HitCollection(hitc.event, hitc.time)
-        out_of_map = np.any(np.isnan([h.Ep for h in hitc.hits]))
-        if out_of_map:
-            #add nan hits to track_hits, the track_id will be -1
-            track_hitc.hits.extend  ([h for h in hitc.hits if np.isnan   (h.Ep)])
-            hits_without_nan       = [h for h in hitc.hits if np.isfinite(h.Ep)]
-            #create new Hitcollection object but keep the name hitc
-            hitc      = HitCollection(hitc.event, hitc.time)
-            hitc.hits = hits_without_nan
+    def create_extract_track_blob_info(hits : pd.DataFrame) -> pd.DataFrame:
+        tracks = pd.DataFrame(columns=list(types_dict_tracks.keys()))
+        if len(hits) > max_num_hits:
+            return tracks, hits, True
 
-        hit_energies = np.array([getattr(h, HitEnergy.Ep.value) for h in hitc.hits])
+        hits = hits.assign(Ep = hits.Ec, out_of_map = hits.Ec.isna())
+        out_of_map = p_hits.out_of_map.any()
 
-        if len(hitc.hits) > 0 and (hit_energies>0).any():
-            voxels           = plf.voxelize_hits(hitc.hits, vox_size, strict_vox_size, HitEnergy.Ep)
+        if len(hits) > 0 and (hits.Ep > 0).any():
+            voxels           = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
             (    mod_voxels,
              dropped_voxels) = plf.drop_end_point_voxels(voxels, energy_threshold, min_voxels)
 
