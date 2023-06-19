@@ -1221,13 +1221,13 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
     vox_size         : [float, float, float]
         (maximum) size of voxels for track reconstruction
     strict_vox_size  : bool
-        if False allows per event adaptive voxel size,
+        if `False` allows per event adaptive voxel size,
         smaller of equal thatn vox_size
     energy_threshold : float
         if energy of end-point voxel is smaller
         the voxel will be dropped and energy redistributed to the neighbours
     min_voxels       : int
-        after min_voxel number of voxels is reached no dropping will happen.
+        after `min_voxels` number of voxels is reached no dropping will happen.
     blob_radius      : float
         radius of blob
 
@@ -1370,21 +1370,21 @@ def compute_and_write_tracks_info(paolina_params, h5out,
 
 
 @check_annotations
-def hits_thresholder(threshold_charge : float, same_peak : bool ) -> Callable:
+def hits_thresholder(threshold_charge : float, same_peak : bool) -> Callable:
     """
     Applies a threshold to hits and redistributes the charge/energy.
 
     Parameters
     ----------
     threshold_charge : float
-        minimum pes of a hit
+        minimum charge of a hit
     same_peak        : bool
-        whether to reassign NN hits' energy only to the hits from the same peak
+        whether to reassign NN hits' energy only to the hits in the same peak
 
     Returns
     ----------
     A function that takes DataFrame as input and returns another one with
-    only non NN hits of charge above threshold_charge.
+    only non NN hits of charge above `threshold_charge`.
     The energy of NN hits is redistributed among neighbors.
     """
 
