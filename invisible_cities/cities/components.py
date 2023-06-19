@@ -1304,23 +1304,20 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
     return create_extract_track_blob_info
 
 
-def compute_and_write_tracks_info(paolina_params, h5out,
-                                  hit_type, filter_hits_table_name='hits_select',
-                                  write_paolina_hits=None):
+@check_annotations
+def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
+                                 , h5out          : tb.File.File
+                                 , hit_type       : HitEnergy
+                                 , write_hits     : Optional[Callable] = None):
 
-    filter_events_nohits = fl.map(lambda x : len(x.hits) > 0,
-                                      args = 'hits',
-                                      out  = 'hits_passed')
-    hits_passed          = fl.count_filter(bool, args="hits_passed")
-
-
-    copy_Efield          = fl.map(Efield_copier(hit_type),
-                                            args = 'hits',
-                                            out  = 'Ep_hits')
+    enough_hits = fl.map( lambda x : len(x) > 0
+                        , args = 'hits'
+                        , out  = 'enough_hits')
+    hits_passed = fl.count_filter(bool, args="enough_hits")
 
     # Create tracks and compute topology-related information
     create_extract_track_blob_info = fl.map(track_blob_info_creator_extractor(**paolina_params),
-                                            args = 'Ep_hits',
+                                            args = 'hits',
                                             out  = ('topology_info', 'paolina_hits', 'out_of_map'))
 
     # Filter empty topology events
@@ -1336,11 +1333,10 @@ def compute_and_write_tracks_info(paolina_params, h5out,
 
 
     # Define writers and make them sinks
-    write_tracks          = fl.sink(   track_writer     (h5out=h5out)             , args="topology_info"      )
-    write_summary         = fl.sink( summary_writer     (h5out=h5out)             , args="event_info"         )
-    write_topology_filter = fl.sink( event_filter_writer(h5out, "topology_select"), args=("event_number", "topology_passed"    ))
-
-    write_no_hits_filter  = fl.sink( event_filter_writer(h5out, filter_hits_table_name), args=("event_number", "hits_passed"))
+    write_tracks          = fl.sink(   track_writer     (h5out=h5out)             , args="topology_info")
+    write_summary         = fl.sink( summary_writer     (h5out=h5out)             , args="event_info"   )
+    write_topology_filter = fl.sink( event_filter_writer(h5out, "topology_select"), args=("event_number", "topology_passed"))
+    write_no_hits_filter  = fl.sink( event_filter_writer(h5out,     "hits_select"), args=("event_number",     "enough_hits"))
 
 
     make_and_write_summary  = make_final_summary, write_summary
@@ -1351,13 +1347,13 @@ def compute_and_write_tracks_info(paolina_params, h5out,
                               , write_paolina_hits
                               , select_and_write_tracks))
 
-    return pipe(filter_events_nohits                        ,
-                fl.branch(write_no_hits_filter)             ,
-                hits_passed.              filter            ,
-                copy_Efield                                 ,
-                create_extract_track_blob_info              ,
-                filter_events_topology                      ,
-                fl.branch(fl.fork(*fork_pipes)))
+    return pipe( enough_hits
+               , fl.branch(write_no_hits_filter)
+               , hits_passed.filter
+               , create_extract_track_blob_info
+               , filter_events_topology
+               , fl.branch(fl.fork(*fork_pipes))
+               )
 
 
 @check_annotations
