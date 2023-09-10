@@ -34,8 +34,13 @@ def _df_writer(h5out):
     return df_writer(h5out, df, 'DUMMY', 'dummy', columns_to_index=['event'])
 
 
+def _hits_writer(h5out):
+    df = pd.DataFrame(columns=['event', 'some_value'], dtype=int)
+    return hits_writer(h5out)(df)
+
+
 @mark.parametrize("         writer  group      node      column   thing".split(),
-                  [(   hits_writer, "RECO" , "Events"  , "event", "hits"),
+                  [(  _hits_writer, "RECO" , "Events"  , "event", "hits"),
                    (     kr_writer, "DST"  , "Events"  , "event", "kr"  ),
                    (   pmap_writer, "PMAPS", "S1"      , "event", "s1"  ),
                    (   pmap_writer, "PMAPS", "S2"      , "event", "s2"  ),
