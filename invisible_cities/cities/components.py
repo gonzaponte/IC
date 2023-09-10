@@ -868,11 +868,12 @@ def hit_builder(dbfile, run_number, drift_v,
             for slice_no, (t_slice, qs) in enumerate(zip(peak.times ,
                                                          sipm_charge)):
                 z_slice = (t_slice - s1_t) * units.ns * drift_v
-                e_slice = peak.pmts.sum_over_sensors[slice_no]
+                e_slice = peak.pmts .sum_over_sensors[slice_no]
                 try:
                     xys      = sipm_xys[peak.sipms.ids]
                     clusters = slice_reco(xys, qs)
-                    es       = hif.split_energy(e_slice, clusters)
+                    qs       = [c.Q for c in clusters]
+                    es       = [q/sum(qs) * e_slice for q in qs]
                     for c, e in zip(clusters, es):
                         hit  = Hit(peak_no, c, z_slice, e, xy_peak)
                         hitc.hits.append(hit)
