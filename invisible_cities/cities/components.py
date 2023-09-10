@@ -15,6 +15,7 @@ from typing          import Dict
 from typing          import Tuple
 from typing          import Union
 from typing          import Optional
+from typing          import Any
 import tables as tb
 import numpy  as np
 import pandas as pd
@@ -1306,7 +1307,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
 
 @check_annotations
 def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
-                                 , h5out          : tb.File.File
+                                 , h5out          : tb.File
                                  , hit_type       : HitEnergy
                                  , write_hits     : Optional[Callable] = None):
 
