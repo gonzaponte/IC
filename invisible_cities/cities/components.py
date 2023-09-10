@@ -843,6 +843,7 @@ def hit_builder(dbfile, run_number, drift_v,
     sipm_noise = NoiseSampler(dbfile, run_number).signal_to_noise
 
     def build_hits(pmap, selector_output, event_number, timestamp):
+        hits = []
         hitc = HitCollection(event_number, timestamp * 1e-3)
         s1_t = get_s1_time(pmap, selector_output)
 
@@ -865,6 +866,12 @@ def hit_builder(dbfile, run_number, drift_v,
                                                  charge_type       ,
                                                  single_point=False)
 
+            df_peak = pd.DataFrame(dict( event = event_number
+                                       , time  = timestamp
+                                       , npeak = peak_no
+                                       , Xpeak = xy_peak[0]
+                                       , Ypeak = xy_peak[1]
+                                       ), index=[0])
             for slice_no, (t_slice, qs) in enumerate(zip(peak.times ,
                                                          sipm_charge)):
                 z_slice = (t_slice - s1_t) * units.ns * drift_v
@@ -875,14 +882,31 @@ def hit_builder(dbfile, run_number, drift_v,
                     qs       = [c.Q for c in clusters]
                     es       = [q/sum(qs) * e_slice for q in qs]
                     for c, e in zip(clusters, es):
-                        hit  = Hit(peak_no, c, z_slice, e, xy_peak)
-                        hitc.hits.append(hit)
+                        hit = df_peak.assign( nsipm = c.nsipm
+                                            , X     = c.X
+                                            , Y     = c.Y
+                                            , Xrms  = c.Xrms
+                                            , Yrms  = c.Yrms
+                                            , Z     = z_slice
+                                            , E     = e
+                                            , Q     = c.Q
+                                            , Qc    = c.Qc)
+                        hits.append(hit)
                 except XYRecoFail:
-                    hit = Hit(peak_no, Cluster.empty(), z_slice,
-                              e_slice, xy_peak)
-                    hitc.hits.append(hit)
+                    hit = df_peak.assign( nsipm = 0
+                                        , X     = NN
+                                        , Y     = NN
+                                        , Xrms  = 0
+                                        , Yrms  = 0
+                                        , Z     = z_slice
+                                        , E     = e_slice
+                                        , Q     = NN
+                                        , Qc    = -1)
 
-        return hitc
+                    hits.append(hit)
+
+        hits = pd.concat(hits, ignore_index=True)
+        return hits
     return build_hits
 
 
