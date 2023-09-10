@@ -19,6 +19,7 @@ from pytest import raises
 
 from hypothesis            import given
 from hypothesis            import settings
+from hypothesis            import HealthCheck
 from hypothesis.strategies import composite
 from hypothesis.strategies import lists
 from hypothesis.strategies import floats
@@ -45,6 +46,7 @@ from .. core               import system_of_units as units
 from .. core.exceptions    import NoHits
 from .. core.exceptions    import NoVoxels
 from .. core.testing_utils import assert_dataframes_equal
+from .. core.testing_utils import assert_dataframes_close
 
 from .. io.mcinfo_io    import cast_mchits_to_dict
 from .. io.mcinfo_io    import load_mchits_df
@@ -188,6 +190,7 @@ def test_voxelize_hits_creates_unique_voxels(hits, vox_size):
 
 
 @given(p_hits(), box_sizes)
+@settings(suppress_health_check=(HealthCheck.too_slow,))
 def test_voxelize_hits_each_hit_has_a_voxel(hits, vox_size):
     hits, voxels, _ = voxelize_hits(hits, vox_size, False)
 
@@ -459,321 +462,334 @@ def test_length_around_bend(contiguity, expected_length):
     assert track_length == approx(expected_length)
 
 
-# @parametrize('contiguity, expected_length',
-#              (# Face contiguity requires 3 steps, each parallel to an axis
-#               (Contiguity.FACE,  1 + 1 + 1),
-#               # Edge continuity allows to cut one corner
-#               (Contiguity.EDGE,  1 + sqrt(2)),
-#               # Corner contiguity makes it possible to do in a single step
-#               (Contiguity.CORNER,    sqrt(3))))
-# def test_length_cuts_corners(contiguity, expected_length):
-#     "Make sure that we cut corners, if the contiguity allows"
-#     voxel_spec = ((0,0,0), # Extremum 1
-#                   (1,0,0),
-#                   (1,1,0),
-#                   (1,1,1)) # Extremum 2
-#     vox_size = np.array([1,1,1])
-#     voxels = [Voxel(x,y,z, 1, vox_size) for x,y,z in voxel_spec]
-#     tracks = make_track_graphs(voxels, contiguity=contiguity)
-#
-#     assert len(tracks) == 1
-#     track_length = length(tracks[0])
-#     assert track_length == approx(expected_length)
-#
-#
-#
-# FACE, EDGE, CORNER = Contiguity
-# @parametrize('contiguity,  proximity,          are_neighbours',
-#              ((FACE,      'share_face',            True),
-#               (FACE,      'share_edge',            False),
-#               (FACE,      'share_corner',          False),
-#               (FACE,      'share_nothing',         False),
-#               (FACE,      'share_nothing_algined', False),
-#
-#               (EDGE,      'share_face',            True),
-#               (EDGE,      'share_edge',            True),
-#               (EDGE,      'share_corner',          False),
-#               (EDGE,      'share_nothing',         False),
-#               (EDGE,      'share_nothing_algined', False),
-#
-#               (CORNER,    'share_face',            True),
-#               (CORNER,    'share_edge',            True),
-#               (CORNER,    'share_corner',          True),
-#               (CORNER,    'share_nothing',         False),
-#               (CORNER,    'share_nothing_algined', False),))
-# def test_contiguity(proximity, contiguity, are_neighbours):
-#     voxel_spec = dict(share_face            = ((0,0,0),
-#                                                (0,0,1)),
-#                       share_edge            = ((0,0,0),
-#                                                (0,1,1)),
-#                       share_corner          = ((0,0,0),
-#                                                (1,1,1)),
-#                       share_nothing         = ((0,0,0),
-#                                                (2,2,2)),
-#                       share_nothing_algined = ((0,0,0),
-#                                                (2,0,0)) )[proximity]
-#     expected_number_of_tracks = 1 if are_neighbours else 2
-#     voxels = [Voxel(x,y,z, 1, np.array([1,1,1])) for x,y,z in voxel_spec]
-#     tracks = make_track_graphs(voxels, contiguity=contiguity)
-#
-#     assert len(tracks) == expected_number_of_tracks
-#
-#
-# @given(p_hits, box_sizes, min_n_of_voxels, fraction_zero_one)
-# def test_energy_is_conserved_with_dropped_voxels(hits, requested_voxel_dimensions, min_voxels, fraction_zero_one):
-#     tot_initial_energy = sum(h.E for h in hits)
-#     voxels = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False)
-#     ini_trks = make_track_graphs(voxels)
-#     ini_trk_energies = [sum(vox.E for vox in t.nodes()) for t in ini_trks]
-#     ini_trk_energies.sort()
-#
-#     energies = [v.E for v in voxels]
-#     e_thr = min(energies) + fraction_zero_one * (max(energies) - min(energies))
-#     mod_voxels, _ = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     tot_final_energy = sum(v.E for v in mod_voxels)
-#     final_trks = make_track_graphs(mod_voxels)
-#     final_trk_energies = [sum(vox.E for vox in t.nodes()) for t in final_trks]
-#     final_trk_energies.sort()
-#
-#     assert tot_initial_energy == approx(tot_final_energy)
-#     assert np.allclose(ini_trk_energies, final_trk_energies)
-#
-#
-# @mark.parametrize("energy_type", HitEnergy)
-# @given(hits                       = p_hits(),
-#        requested_voxel_dimensions = box_sizes,
-#        min_voxels                 = min_n_of_voxels,
-#        fraction_zero_one          = fraction_zero_one)
-# def test_dropped_voxels_have_nan_energy(hits, requested_voxel_dimensions, min_voxels, fraction_zero_one, energy_type):
-#     voxels            = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False, energy_type=energy_type)
-#     energies          = [v.E for v in voxels]
-#     e_thr             = min(energies) + fraction_zero_one * (max(energies) - min(energies))
-#     _, dropped_voxels = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     for voxel in dropped_voxels:
-#         assert np.isnan(voxel.E)
-#         for hit in voxel.hits:
-#             assert np.isnan(getattr(hit, energy_type.value))
-#
-#
-# @mark.parametrize("energy_type", HitEnergy)
-# @given(hits                       = p_hits(),
-#        requested_voxel_dimensions = box_sizes,
-#        min_voxels                 = min_n_of_voxels,
-#        fraction_zero_one          = fraction_zero_one)
-# def test_drop_end_point_voxels_doesnt_modify_other_energy_types(hits, requested_voxel_dimensions, min_voxels, fraction_zero_one, energy_type):
-#     def energy_from_hits(voxel, e_type):
-#         return [getattr(hit, e_type) for hit in voxel.hits]
-#
-#     voxels     = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False, energy_type=energy_type)
-#     voxels     = sorted(voxels, key=attrgetter("xyz"))
-#     energies   = [v.E for v in voxels]
-#     e_thr      = min(energies) + fraction_zero_one * (max(energies) - min(energies))
-#     mod, drop  = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     new_voxels = sorted(mod + drop, key=attrgetter("xyz"))
-#
-#     for e_type in HitEnergy:
-#         if e_type is energy_type: continue
-#
-#         for v_before, v_after in zip(voxels, new_voxels):
-#             for h_before, h_after in zip(v_before.hits, v_after.hits):
-#                 #assert sum(energy_from_hits(v_before, e_type.value)) == sum(energy_from_hits(v_after, e_type.value))
-#                 assert np.isclose(getattr(h_before, e_type.value), getattr(h_after, e_type.value))
-#
-#
-# @mark.parametrize("energy_type", HitEnergy)
-# @given(hits                       = p_hits(),
-#        requested_voxel_dimensions = box_sizes,
-#        min_voxels                 = min_n_of_voxels,
-#        fraction_zero_one          = fraction_zero_one)
-# def test_drop_voxels_voxel_energy_is_sum_of_hits_general(hits, requested_voxel_dimensions, min_voxels, fraction_zero_one, energy_type):
-#     voxels        = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False, energy_type=energy_type)
-#     energies      = [v.E for v in voxels]
-#     e_thr         = min(energies) + fraction_zero_one * (max(energies) - min(energies))
-#     mod_voxels, _ = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     for v in mod_voxels:
-#         assert np.isclose(v.E, sum(getattr(h, energy_type.value) for h in v.hits))
-#
-#
-#
-# @mark.parametrize("energy_type", HitEnergy)
-# @given(hits                       = p_hits(),
-#        requested_voxel_dimensions = box_sizes,
-#        min_voxels                 = min_n_of_voxels,
-#        fraction_zero_one          = fraction_zero_one)
-# def test_drop_end_point_voxels_constant_number_of_voxels_and_hits(hits, requested_voxel_dimensions, min_voxels, fraction_zero_one, energy_type):
-#     voxels           = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False, energy_type=energy_type)
-#     energies         = [v.E for v in voxels]
-#     e_thr            = min(energies) + fraction_zero_one * (max(energies) - min(energies))
-#     new_voxels       = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     (mod_voxels,
-#      dropped_voxels) = new_voxels
-#     assert len(mod_voxels) + len(dropped_voxels) == len(voxels)
-#     assert sum(1 for vs in new_voxels for v in vs for h in v.hits) == len(hits)
-#
-#
-# def test_initial_voxels_are_the_same_after_dropping_voxels(ICDATADIR):
-#
-#     # Get some test data: nothing interesting to see here
-#     hit_file = os.path.join(ICDATADIR, 'tracks_0000_6803_trigger2_v0.9.9_20190111_krth1600.h5')
-#     evt_number = 19
-#     e_thr = 5867.92
-#     min_voxels = 3
-#     size = 15.
-#     vox_size = np.array([size,size,size], dtype=np.float16)
-#     all_hits = load_hits(hit_file)
-#     hits = all_hits[evt_number].hits
-#     voxels = voxelize_hits(hits, vox_size, strict_voxel_size=False)
-#
-#     # This is the core of the test: collect data before/after ...
-#     ante_energies  = [v.E   for v in voxels]
-#     ante_positions = [v.XYZ for v in voxels]
-#     mod_voxels, _ = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#     post_energies  = [v.E   for v in voxels]
-#     post_positions = [v.XYZ for v in voxels]
-#
-#     ante_energies.sort()
-#     post_energies.sort()
-#     ante_positions.sort()
-#     post_positions.sort()
-#
-#     # ... and make sure that nothing has changed
-#     assert len(ante_energies)  == len(post_energies)
-#     assert len(ante_positions) == len(post_positions)
-#     assert np.allclose(ante_energies,  post_energies)
-#     assert np.allclose(ante_positions, post_positions)
-#
-#
-# def test_tracks_with_dropped_voxels(ICDATADIR):
-#     hit_file = os.path.join(ICDATADIR, 'tracks_0000_6803_trigger2_v0.9.9_20190111_krth1600.h5')
-#     evt_number = 19
-#     e_thr = 5867.92
-#     min_voxels = 3
-#     size = 15.
-#     vox_size = np.array([size,size,size],dtype=np.float16)
-#
-#     all_hits = load_hits(hit_file)
-#     hits = all_hits[evt_number].hits
-#     voxels = voxelize_hits(hits, vox_size, strict_voxel_size=False)
-#     ini_trks = make_track_graphs(voxels)
-#     initial_n_of_tracks = len(ini_trks)
-#     ini_energies = [sum(vox.E for vox in t.nodes()) for t in ini_trks]
-#     ini_n_voxels = np.array([len(t.nodes()) for t in ini_trks])
-#
-#     mod_voxels, _ = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#
-#     trks = make_track_graphs(mod_voxels)
-#     n_of_tracks = len(trks)
-#     energies = [sum(vox.E for vox in t.nodes()) for t in trks]
-#     n_voxels = np.array([len(t.nodes()) for t in trks])
-#
-#     expected_diff_n_voxels = np.array([0, 0, 2])
-#
-#     ini_energies.sort()
-#     energies.sort()
-#
-#     assert initial_n_of_tracks == n_of_tracks
-#     assert np.allclose(ini_energies, energies)
-#     assert np.all(ini_n_voxels - n_voxels == expected_diff_n_voxels)
-#
-#
-# def test_drop_voxels_deterministic(ICDATADIR):
-#     hit_file   = os.path.join(ICDATADIR, 'tracks_0000_6803_trigger2_v0.9.9_20190111_krth1600.h5')
-#     evt_number = 19
-#     e_thr      = 5867.92
-#     min_voxels = 3
-#     vox_size   = [15.] * 3
-#
-#     all_hits        = load_hits(hit_file)
-#     hits            = all_hits[evt_number].hits
-#     voxels          = voxelize_hits(hits, vox_size, strict_voxel_size=False)
-#     mod_voxels  , _ = drop_end_point_voxels(sorted(voxels, key = lambda v:v.E, reverse = False), e_thr, min_voxels)
-#     mod_voxels_r, _ = drop_end_point_voxels(sorted(voxels, key = lambda v:v.E, reverse = True ), e_thr, min_voxels)
-#
-#     for v1, v2 in zip(sorted(mod_voxels, key = lambda v:v.E), sorted(mod_voxels_r, key = lambda v:v.E)):
-#         assert np.isclose(v1.E, v2.E)
-#
-#
-# def test_voxel_drop_in_short_tracks():
-#     hits = [BHit(10, 10, 10, 1), BHit(26, 10, 10, 1)]
-#     voxels = voxelize_hits(hits, [15,15,15], strict_voxel_size=True)
-#     e_thr = sum(v.E for v in voxels) + 1.
-#     min_voxels = 0
-#
-#     mod_voxels, _ = drop_end_point_voxels(voxels, e_thr, min_voxels)
-#
-#     assert len(mod_voxels) >= 1
-#
-#
-# def test_drop_voxels_voxel_energy_is_sum_of_hits():
-#     def make_hit(x, y, z, e):
-#         return Hit(peak_number = 0,
-#                    cluster     = Cluster(0, xy(x, y), xy(0, 0), 1),
-#                    z           = z,
-#                    s2_energy   = e,
-#                    peak_xy     = xy(0, 0),
-#                    Ep          = e)
-#
-#     # Create a track with an extreme to be dropped and two hits at the same
-#     # distance from the barycenter of the the voxel to be dropped with
-#     # different energies in the hits *and* in the voxels
-#     voxels = [Voxel( 0,  0, 0, 0.1, size=5, e_type=HitEnergy.Ep, hits = [make_hit( 0,  0, 0, 0.1)                          ]),
-#               Voxel( 5, -5, 0, 1.0, size=5, e_type=HitEnergy.Ep, hits = [make_hit( 5, -5, 0, 0.7), make_hit( 5, -8, 0, 0.3)]),
-#               Voxel( 5,  5, 0, 1.5, size=5, e_type=HitEnergy.Ep, hits = [make_hit( 5,  5, 0, 0.9), make_hit( 5,  8, 0, 0.6)]),
-#               Voxel(10,  0, 0, 2.0, size=5, e_type=HitEnergy.Ep, hits = [make_hit(10,  5, 0, 1.2), make_hit(11,  5, 0, 0.8)]),
-#               Voxel(15,  0, 0, 2.5, size=5, e_type=HitEnergy.Ep, hits = [make_hit(15,  0, 0, 1.8), make_hit(11,  0, 0, 0.7)]),
-#               Voxel(20,  0, 0, 3.0, size=5, e_type=HitEnergy.Ep, hits = [make_hit(20,  0, 0, 1.5), make_hit(11,  0, 0, 1.5)])]
-#
-#     modified_voxels, _ = drop_end_point_voxels(voxels, energy_threshold = 0.5, min_vxls = 1)
-#     for v in modified_voxels:
-#         assert np.isclose(v.E, sum(h.Ep for h in v.hits))
-#
-#
-# @parametrize('radius, expected',
-#              ((10., ( 60,  20)),
-#               (12., ( 60,  60)),
-#               (14., (100,  60)),
-#               (16., (120,  80)),
-#               (18., (120,  80)),
-#               (20., (140,  80)),
-#               (22., (140, 100))
-#  ))
-# def test_blobs(radius, expected):
-#     hits = [BHit(105.0, 125.0, 77.7, 10),
-#             BHit( 95.0, 125.0, 77.7, 10),
-#             BHit( 95.0, 135.0, 77.7, 10),
-#             BHit(105.0, 135.0, 77.7, 10),
-#             BHit(105.0, 115.0, 77.7, 10),
-#             BHit( 95.0, 115.0, 77.7, 10),
-#             BHit( 95.0, 125.0, 79.5, 10),
-#             BHit(105.0, 125.0, 79.5, 10),
-#             BHit(105.0, 135.0, 79.5, 10),
-#             BHit( 95.0, 135.0, 79.5, 10),
-#             BHit( 95.0, 115.0, 79.5, 10),
-#             BHit(105.0, 115.0, 79.5, 10),
-#             BHit(115.0, 125.0, 79.5, 10),
-#             BHit(115.0, 125.0, 85.2, 10)]
-#     vox_size = np.array([15.,15.,15.],dtype=np.float16)
-#     voxels = voxelize_hits(hits, vox_size)
-#     tracks = make_track_graphs(voxels)
-#
-#     assert len(tracks) == 1
-#     assert blob_energies(tracks[0], radius) == expected
-#
-#
-# @given(p_hits, box_sizes, radius)
-# def test_blob_hits_are_inside_radius(hits, voxel_dimensions, blob_radius):
-#     voxels = voxelize_hits(hits, voxel_dimensions)
-#     tracks = make_track_graphs(voxels)
-#     for t in tracks:
-#         Ea, Eb, hits_a, hits_b   = blob_energies_and_hits(t, blob_radius)
-#         centre_a, centre_b       = blob_centres(t, blob_radius)
-#
-#         for h in hits_a:
-#             assert np.linalg.norm(h.XYZ - centre_a) < blob_radius
-#         for h in hits_b:
-#             assert np.linalg.norm(h.XYZ - centre_b) < blob_radius
-#
-#
+@mark.parametrize('contiguity, expected_length',
+                 (# Face contiguity requires 3 steps, each parallel to an axis
+                  (Contiguity.FACE,  1 + 1 + 1),
+                  # Edge continuity allows to cut one corner
+                  (Contiguity.EDGE,  1 + sqrt(2)),
+                  # Corner contiguity makes it possible to do in a single step
+                  (Contiguity.CORNER,    sqrt(3))))
+def test_length_cuts_corners(contiguity, expected_length):
+    "Make sure that we cut corners, if the contiguity allows"
+    fake_voxels = pd.DataFrame(dict( X = [0, 1, 1, 1]
+                                   , Y = [0, 0, 1, 1]
+                                   , Z = [0, 0, 0, 1]))
+    vox_size = np.array([1,1,1])
+    tracks = make_track_graphs(fake_voxels, vox_size, contiguity=contiguity)
+
+    assert len(tracks) == 1
+    _, _, track_length = find_extrema(tracks[0])
+    assert track_length == approx(expected_length)
+
+
+FACE, EDGE, CORNER = Contiguity
+@mark.parametrize('contiguity,  proximity,          are_neighbours',
+                 ((FACE,      'share_face',            True),
+                  (FACE,      'share_edge',            False),
+                  (FACE,      'share_corner',          False),
+                  (FACE,      'share_nothing',         False),
+                  (FACE,      'share_nothing_aligned', False),
+
+                  (EDGE,      'share_face',            True),
+                  (EDGE,      'share_edge',            True),
+                  (EDGE,      'share_corner',          False),
+                  (EDGE,      'share_nothing',         False),
+                  (EDGE,      'share_nothing_aligned', False),
+
+                  (CORNER,    'share_face',            True),
+                  (CORNER,    'share_edge',            True),
+                  (CORNER,    'share_corner',          True),
+                  (CORNER,    'share_nothing',         False),
+                  (CORNER,    'share_nothing_aligned', False),))
+def test_contiguity(proximity, contiguity, are_neighbours):
+    voxels = pd.DataFrame(dict( X = [0, 0, 0, 0, 0, 1, 0, 2, 0, 2]
+                              , Y = [0, 0, 0, 1, 0, 1, 0, 2, 0, 0]
+                              , Z = [0, 1, 0, 1, 0, 1, 0, 2, 0, 0]
+                              , P = ["share_face"  ]*2 + ["share_edge"   ]*2
+                                  + ["share_corner"]*2 + ["share_nothing"]*2
+                                  + ["share_nothing_aligned"]*2))
+
+    voxels = voxels.groupby("P").get_group(proximity)
+    expected_number_of_tracks = 1 if are_neighbours else 2
+    vox_size = np.array([1, 1, 1])
+    tracks = make_track_graphs(voxels, vox_size, contiguity=contiguity)
+
+    assert len(tracks) == expected_number_of_tracks
+
+
+@given(p_hits(), box_sizes, min_n_of_voxels, fraction_zero_one)
+def test_energy_is_conserved_with_dropped_voxels(hits, vox_size, min_voxels, fraction_zero_one):
+    etype = HitEnergy.E
+    initial_energy = hits.E.sum()
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type = etype)
+    initial_tracks = make_track_graphs(voxels, vox_size)
+    initial_track_energies = [sum(voxels.loc[i].E for i in track.nodes()) for track in initial_tracks]
+    initial_track_energies.sort()
+
+    e_thr = voxels.E.min() + fraction_zero_one * (voxels.E.max() - voxels.E.min())
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+
+    final_energy = hits.E.sum()
+    final_tracks =  make_track_graphs(voxels, vox_size)
+    final_track_energies = [sum(voxels.loc[i].E for i in track.nodes()) for track in final_tracks]
+    final_track_energies.sort()
+
+    assert initial_energy == approx(final_energy)
+    assert np.allclose(initial_track_energies, final_track_energies)
+
+
+@mark.parametrize("energy_type", HitEnergy)
+@given(hits              = p_hits(),
+       vox_size          = box_sizes,
+       min_voxels        = min_n_of_voxels,
+       fraction_zero_one = fraction_zero_one)
+def test_dropped_voxels_have_nan_energy(hits, vox_size, min_voxels, fraction_zero_one, energy_type):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=energy_type)
+    vox_e  = voxels[energy_type.value]
+    e_thr  = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
+    _, _, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+
+    assert np.all(np.isnan(dropped_voxels[energy_type.value]))
+    assert np.all(np.isnan(dropped_hits  [energy_type.value]))
+
+
+@mark.parametrize("energy_type", HitEnergy)
+@given(hits              = p_hits(),
+       vox_size          = box_sizes,
+       min_voxels        = min_n_of_voxels,
+       fraction_zero_one = fraction_zero_one)
+@settings(suppress_health_check=(HealthCheck.too_slow,))
+def test_drop_end_point_voxels_doesnt_modify_other_energy_types(hits, vox_size, min_voxels, fraction_zero_one, energy_type):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=energy_type)
+    original_hits   =   hits.copy()
+    original_voxels = voxels.copy()
+
+    vox_e = voxels[energy_type.value]
+    e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
+
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+    new_voxels = pd.concat([voxels, dropped_voxels])
+    new_hits   = pd.concat([  hits, dropped_hits  ])
+
+    for e_type in HitEnergy:
+        if e_type is energy_type: continue
+
+        original_voxels = original_voxels.sort_values(e_type.value)
+        original_hits   = original_hits  .sort_values(e_type.value)
+        new_voxels      =      new_voxels.sort_values(e_type.value)
+        new_hits        =      new_hits  .sort_values(e_type.value)
+        assert np.allclose(original_voxels[e_type.value], new_voxels[e_type.value])
+        assert np.allclose(original_hits  [e_type.value], new_hits  [e_type.value])
+
+
+@mark.parametrize("energy_type", HitEnergy)
+@given(hits              = p_hits(),
+       vox_size          = box_sizes,
+       min_voxels        = min_n_of_voxels,
+       fraction_zero_one = fraction_zero_one)
+@settings(suppress_health_check=(HealthCheck.too_slow,))
+def test_drop_voxels_voxel_energy_is_sum_of_hits_general(hits, vox_size, min_voxels, fraction_zero_one, energy_type):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=energy_type)
+
+    vox_e = voxels[energy_type.value]
+    e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
+
+    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+
+
+    for i, v in voxels.iterrows():
+        hits_e = hits.loc[hits.voxel==i, energy_type.value]
+        assert np.isclose(v[energy_type.value], hits_e.sum())
+
+
+@mark.parametrize("energy_type", HitEnergy)
+@given(hits              = p_hits(),
+       vox_size          = box_sizes,
+       min_voxels        = min_n_of_voxels,
+       fraction_zero_one = fraction_zero_one)
+def test_drop_end_point_voxels_constant_number_of_voxels_and_hits(hits, vox_size, min_voxels, fraction_zero_one, energy_type):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=energy_type)
+
+    n_voxels_before = len(voxels)
+    n_hits_before   = len(hits)
+
+    vox_e = voxels[energy_type.value]
+    e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
+
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+
+    n_voxels_after = len(voxels)
+    n_hits_after   = len(hits)
+
+    assert n_voxels_before == n_voxels_after
+    assert n_hits_before   == n_hits_after
+
+
+@fixture(scope="module")
+def tracks_from_data(ICDATADIR):
+    hit_file   = os.path.join(ICDATADIR, 'tracks_0000_6803_trigger2_v0.9.9_20190111_krth1600.h5')
+    evt_number = 19
+    e_thr      = 5867.92
+    min_voxels = 3
+    size       = 15.
+    vox_size   = np.array([size]*3, dtype=np.float16)
+    etype      = HitEnergy.E
+
+    all_hits = pd.read_hdf(hit_file, "/RECO/Events")
+    hits     = all_hits.groupby("event").get_group(evt_number).assign(Ep = lambda df: df.Ec)
+    return hits, vox_size, e_thr, min_voxels, etype
+
+
+def test_initial_voxels_are_the_same_after_dropping_voxels(tracks_from_data):
+    hits, vox_size, e_thr, min_voxels, etype = tracks_from_data
+
+    # This is the core of the test: collect data before/after ...
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type = etype)
+    original_hits   =   hits.copy()
+    original_voxels = voxels.copy()
+
+    drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+
+    assert_dataframes_equal(original_hits  , hits)
+    assert_dataframes_equal(original_voxels, voxels)
+
+
+def test_tracks_with_dropped_voxels(tracks_from_data):
+    hits, vox_size, e_thr, min_voxels, etype = tracks_from_data
+
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False)
+
+    initial_tracks      = make_track_graphs(voxels, vox_size)
+    initial_n_of_tracks = len(initial_tracks)
+
+    initial_energies    = [voxels.loc[list(t.nodes()), etype.value].sum() for t in initial_tracks]
+    initial_n_voxels    = np.array([len(t.nodes()) for t in initial_tracks])
+
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+
+    final_tracks      = make_track_graphs(voxels, vox_size)
+    final_n_of_tracks = len(final_tracks)
+    final_energies    = [voxels.loc[list(t.nodes()), etype.value].sum() for t in final_tracks]
+    final_n_voxels    = np.array([len(t.nodes()) for t in final_tracks])
+
+    expected_diff_n_voxels = np.array([0, 0, 2])
+
+    assert initial_n_of_tracks == final_n_of_tracks
+    assert np.allclose(initial_energies, final_energies)
+    assert np.all(initial_n_voxels - final_n_voxels == expected_diff_n_voxels)
+
+
+def test_drop_voxels_deterministic(tracks_from_data):
+    hits, vox_size, e_thr, min_voxels, etype = tracks_from_data
+
+    hits0, voxels0, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False)
+    hits0   =   hits0.sort_values(etype.value, ascending=True)
+    voxels0 = voxels0.sort_values(etype.value, ascending=True)
+    hits1, voxels1, _, _ = drop_end_point_voxels(hits0.copy(), voxels0.copy(), vox_size, e_thr, min_voxels, etype)
+
+    hits0   =   hits0.sort_values(etype.value, ascending=False)
+    voxels0 = voxels0.sort_values(etype.value, ascending=False)
+    hits2, voxels2, _, _ = drop_end_point_voxels(hits0, voxels0, vox_size, e_thr, min_voxels, etype)
+
+    assert_dataframes_close(  hits1.sort_values(etype.value),   hits2.sort_values(etype.value))
+    assert_dataframes_close(voxels1.sort_values(etype.value), voxels2.sort_values(etype.value))
+
+
+def make_hits(event=0, npeak=0, X=0, Y=0, Z=0, E=0, Q=0, Ec=None, Ep=None, voxel=np.nan):
+    return pd.DataFrame(dict( event = event
+                            , npeak = npeak
+                            , X     = X
+                            , Y     = Y
+                            , Z     = Z
+                            , E     = E
+                            , Q     = Q
+                            , Ec    = Ec if Ec is not None else E
+                            , Ep    = Ep if Ep is not None else E
+                            , voxel = voxel
+    ))
+
+
+def test_voxel_drop_in_short_tracks():
+    hits = make_hits( X = [10, 26]
+                    , Y = [10, 10]
+                    , Z = [10, 10]
+                    , E = [ 1,  1])
+    vox_size = [15]*3
+
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=True)
+
+    e_thr      = voxels.E.sum() + 1
+    min_voxels = 0
+
+    _, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, HitEnergy.E)
+
+    assert len(voxels) >= 1
+
+
+def test_drop_voxels_voxel_energy_is_sum_of_hits():
+    hits   = make_hits( X     = [0  ,  5  ,  5  , 5  , 5  , 10  , 11  , 15  , 11  , 20  , 11  ]
+                      , Y     = [0  , -5  , -8  , 5  , 8  ,  5  ,  5  ,  0  ,  0  ,  0  ,  0  ]
+                      , E     = [0.1,  0.7,  0.3, 0.9, 0.6,  1.2,  0.8,  1.8,  0.7,  1.5,  1.5]
+                      , voxel = [0  ,  1  ,  1  , 2  , 2  ,  3  ,  3  ,  4  ,  4  ,  5  ,  5  ])
+
+    voxels   = pd.DataFrame(dict( X    = [0, 5, 5, 10, 15, 20]
+                                , Y    = [0, -5, 5, 0, 0, 0]
+                                , Z    = 0
+                                , E    = [0.1, 1.0, 1.5, 2.0, 2.5, 3.0]
+                                , nhits= [1, 2, 2, 2, 2, 2])
+                           ).assign(Ec=lambda df: df.E, Ep=lambda df: df.E)
+
+    e_thr      = 0.5
+    e_type     = HitEnergy.Ep
+    vox_size   = [5] * 3
+    min_voxels = 1
+
+    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, e_type)
+
+    for i, voxel in voxels.iterrows():
+        hits_in_voxel = hits.loc[hits.voxel==i]
+        assert voxel[e_type.value] == approx(hits_in_voxel[e_type.value].sum())
+
+
+@mark.parametrize('radius expected'.split(),
+                 ((10., ( 60,  20)),
+                  (12., ( 60,  60)),
+                  (14., (100,  60)),
+                  (16., (120,  80)),
+                  (18., (120,  80)),
+                  (20., (140,  80)),
+                  (22., (140, 100))))
+def test_blobs(radius, expected):
+    hits = make_hits( X = [105,  95,  95, 105, 105,  95,  95, 105, 105,  95,  95, 105, 115, 115]
+                    , Y = [125, 125, 135, 135, 115, 115, 125, 125, 135, 135, 115, 115, 125, 125]
+                    , Z = [77.7] * 6 + [79.5] * 7 + [85.2]
+                    , E = 10)
+    vox_size = [15.]*3
+
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size)
+    tracks                 = make_track_graphs(voxels, vox_size)
+
+    assert len(tracks) == 1
+
+    blob1, blob2 = find_blobs(hits, voxels, vox_size, tracks[0], radius, HitEnergy.E)
+    assert (blob1[0], blob2[0]) == expected
+
+
+@given(p_hits(), box_sizes, radius)
+def test_blob_hits_are_inside_radius(hits, vox_size, blob_radius):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size)
+    tracks                 = make_track_graphs(voxels, vox_size)
+    e_type                 = HitEnergy.E
+    for track in tracks:
+        blob_a, blob_b = find_blobs(hits, voxels, vox_size, track, blob_radius, e_type)
+        E_a, centre_a, hits_a, vox_a = blob_a
+        E_b, centre_b, hits_b, vox_b = blob_b
+
+        xyz = list("XYZ")
+        assert np.all(np.linalg.norm(hits_a[xyz] - centre_a, axis=1) < blob_radius)
+        assert np.all(np.linalg.norm(hits_b[xyz] - centre_b, axis=1) < blob_radius)
+
+
 # @given(blob_radius=radius, min_voxels=min_n_of_voxels, fraction_zero_one=fraction_zero_one)
 # def test_paolina_functions_with_voxels_without_associated_hits(blob_radius, min_voxels, fraction_zero_one, voxels_without_hits):
 #     voxels = voxels_without_hits
@@ -815,88 +831,86 @@ def test_length_around_bend(contiguity, expected_length):
 #         assert np.allclose(blob_centre(b), b.pos)
 #
 #
-# @mark.parametrize("energy_type", (HitEnergy.Ec, HitEnergy.Ep))
-# @given(hits                       = p_hits(),
-#        requested_voxel_dimensions = box_sizes,
-#        blob_radius                = radius,
-#        fraction_zero_one          = fraction_zero_one)
-# def test_paolina_functions_with_hit_energy_different_from_default_value(hits, requested_voxel_dimensions, blob_radius, fraction_zero_one, energy_type):
-#     voxels   = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False)
-#     voxels_c = voxelize_hits(hits, requested_voxel_dimensions, strict_voxel_size=False, energy_type=energy_type)
-#
-#     # The first assertion is needed for the test to keep being meaningful,
-#     # in case we change the default value of energy_type to energy_c.
-#     assert voxels[0].Etype   != voxels_c[0].Etype
-#     assert voxels_c[0].Etype == energy_type.value
-#
-#     for voxel in voxels_c:
-#         assert np.isclose(voxel.E, sum(getattr(h, energy_type.value) for h in voxel.hits))
-#
-#     energies_c = [v.E for v in voxels_c]
-#     e_thr = min(energies_c) + fraction_zero_one * (max(energies_c) - min(energies_c))
-#     # Test that this function doesn't fail
-#     mod_voxels_c, _ = drop_end_point_voxels(voxels_c, e_thr, min_vxls=0)
-#
-#     tot_energy     = sum(getattr(h, energy_type.value) for v in voxels_c     for h in v.hits)
-#     tot_mod_energy = sum(getattr(h, energy_type.value) for v in mod_voxels_c for h in v.hits)
-#
-#     assert np.isclose(tot_energy, tot_mod_energy)
-#
-#     tot_default_energy     = sum(h.E for v in voxels_c     for h in v.hits)
-#     tot_mod_default_energy = sum(h.E for v in mod_voxels_c for h in v.hits)
-#
-#     # We don't want to modify the default energy of hits, if the voxels are made with energy_c
-#     if len(mod_voxels_c) < len(voxels_c):
-#         assert tot_default_energy > tot_mod_default_energy
-#
-#
-# def test_make_tracks_function(ICDATADIR):
-#
-#     # Get some test data
-#     hit_file    = os.path.join(ICDATADIR, 'tracks_0000_6803_trigger2_v0.9.9_20190111_krth1600.h5')
-#     evt_number  = 19
-#     size        = 15.
-#     voxel_size  = np.array([size,size,size], dtype=np.float16)
-#     blob_radius = 21*units.mm
-#
-#     # Read the hits and voxelize
-#     all_hits = load_hits(hit_file)
-#
-#     for evt_number, hit_coll in all_hits.items():
-#         evt_hits = hit_coll.hits
-#         evt_time = hit_coll.time
-#         voxels   = voxelize_hits(evt_hits, voxel_size, strict_voxel_size=False, energy_type=HitEnergy.E)
-#
-#         tracks   = list(make_track_graphs(voxels))
-#
-#         track_coll = make_tracks(evt_number, evt_time, voxels, voxel_size,
-#                                  contiguity=Contiguity.CORNER,
-#                                  blob_radius=blob_radius,
-#                                  energy_type=HitEnergy.E)
-#         tracks_from_coll = track_coll.tracks
-#
-#         tracks.sort          (key=lambda x : len(x.nodes()))
-#         tracks_from_coll.sort(key=lambda x : x.number_of_voxels)
-#
-#         # Compare the two sets of tracks
-#         assert len(tracks) == len(tracks_from_coll)
-#         for i in range(len(tracks)):
-#             t  = tracks[i]
-#             tc = tracks_from_coll[i]
-#
-#             assert len(t.nodes())                   == tc.number_of_voxels
-#             assert sum(v.E for v in t.nodes()) == tc.E
-#
-#             tc_blobs = list(tc.blobs)
-#             tc_blobs.sort(key=lambda x : x.E)
-#             tc_blob_energies = (tc.blobs[0].E, tc.blobs[1].E)
-#
-#             assert np.allclose(blob_energies(t, blob_radius), tc_blob_energies)
-#
-#
-# @given(p_hits, box_sizes)
-# def test_make_voxel_graph_keeps_energy_consistence(hits, voxel_dimensions):
-#     voxels = voxelize_hits    (hits  , voxel_dimensions)
-#     tracks = make_track_graphs(voxels)
-#     # assert sum of track energy equal to sum of hits energies
-#     assert_almost_equal(sum(get_track_energy(track) for track in tracks), sum(h.E for h in hits))
+@mark.parametrize("etype", (HitEnergy.Ec, HitEnergy.Ep))
+@given(hits              = p_hits(),
+       vox_size          = box_sizes,
+       blob_radius       = radius,
+       fraction_zero_one = fraction_zero_one)
+def test_paolina_functions_with_hit_energy_different_from_default_value(hits, vox_size, blob_radius, fraction_zero_one, etype):
+    hits  , voxels  , vox_size   = voxelize_hits(hits, vox_size, strict_voxel_size=False)
+    hits_c, voxels_c, vox_size_c = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=etype)
+
+    original_energy   = voxels_c.E           .sum()
+    original_energy_c = voxels_c[etype.value].sum()
+
+    for i, voxel in voxels_c.iterrows():
+        hits_e = hits_c.loc[hits_c.voxel==i, etype.value]
+        assert voxel[etype.value] == approx(hits_e.sum())
+
+    vox_e = voxels_c[etype.value]
+    e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
+
+    # Test that this function doesn't fail
+    min_voxels = 0
+    hits_c, voxels_c, dropped_hits_c, _ = drop_end_point_voxels(hits_c, voxels_c, vox_size_c, e_thr, min_voxels, etype)
+
+    modified_energy   = voxels_c.E           .sum()
+    modified_energy_c = voxels_c[etype.value].sum()
+    assert original_energy_c == approx(modified_energy_c)
+
+    # We don't want to modify the default energy of hits, if the voxels are made with energy_c
+    if len(dropped_hits_c):
+       assert original_energy > modified_energy
+
+
+def test_make_tracks(tracks_from_data):
+    all_hits, vox_size, e_thr, min_voxels, etype = tracks_from_data
+    blob_radius = 21*units.mm
+
+    # TODO: do it for all events
+    for evt_number in range(1):
+        evt_hits = all_hits
+        evt_time = all_hits.time
+
+        hits_g, voxels_g, vox_size_g = voxelize_hits(evt_hits, vox_size, strict_voxel_size=False, energy_type=etype)
+        graphs                 = list(make_track_graphs(voxels_g, vox_size_g))
+
+        hits, voxels, tracks = make_tracks(hits_g, voxels_g, vox_size, Contiguity.CORNER, blob_radius, etype)
+
+        graphs.sort(key=lambda x : len(x.nodes()))
+        tracks.sort_values("nvoxels")
+
+        # Compare the two sets of tracks
+        assert len(graphs) == len(tracks)
+
+        for i, track in tracks.iterrows():
+            graph   = graphs[i]
+            indices = list(graph.nodes())
+            voxels_in_graph = voxels_g.loc[indices]
+
+            assert len(graph.nodes())                 == track.nvoxels
+            assert voxels_in_graph[etype.value].sum() == approx(track.E)
+
+            blob1, blob2 = find_blobs(hits_g, voxels_g, vox_size_g, graph, blob_radius, etype)
+
+            assert blob1[0] == approx(track.Eblob1)
+            assert blob2[0] == approx(track.Eblob2)
+
+            assert blob1[1][0] == approx(track.Xblob1)
+            assert blob1[1][1] == approx(track.Yblob1)
+            assert blob1[1][2] == approx(track.Zblob1)
+            assert blob2[1][0] == approx(track.Xblob2)
+            assert blob2[1][1] == approx(track.Yblob2)
+            assert blob2[1][2] == approx(track.Zblob2)
+
+
+@given(p_hits(), box_sizes)
+def test_make_voxel_graph_keeps_energy_consistence(hits, vox_size):
+    hits, voxels, vox_size = voxelize_hits(hits, vox_size)
+    tracks                 = make_track_graphs(voxels, vox_size)
+
+    # assert sum of track energy equal to sum of hits energies
+    hits_e   = hits.E.sum()
+    tracks_e = sum(voxels.loc[list(track.nodes())].E.sum() for track in tracks)
+
+    assert hits_e == approx(tracks_e)
