@@ -15,6 +15,7 @@ from typing          import Dict
 from typing          import Tuple
 from typing          import Union
 from typing          import Any
+from typing          import Optional
 
 import tables as tb
 import numpy  as np
@@ -1317,7 +1318,7 @@ def sort_hits(hits):
 
 @check_annotations
 def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
-                                 , h5out          : tb.File.File
+                                 , h5out          : tb.File
                                  , hit_type       : HitEnergy
                                  , write_hits     : Optional[Callable] = None):
     enough_hits = fl.map( lambda x : len(x) > 0
