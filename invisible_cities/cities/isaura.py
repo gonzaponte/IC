@@ -24,7 +24,7 @@ from .  components import city
 from .  components import print_every
 from .  components import collect
 from .  components import copy_mc_info
-from .  components import dhits_from_files
+from .  components import hits_and_kdst_from_files
 from .  components import compute_and_write_tracks_info
 
 from .. types.symbols import HitEnergy
@@ -102,7 +102,7 @@ def isaura( files_in       : OneOrManyFiles
 
         compute_tracks = compute_and_write_tracks_info(paolina_params, h5out, hit_type=HitEnergy.E)
 
-        result = push(source = dhits_from_files(files_in),
+        result = push(source = hits_and_kdst_from_files(files_in),
                       pipe   = pipe(fl.slice(*event_range, close_all=True)        ,
                                     print_every(print_mod)                        ,
                                     event_count_in        .spy                    ,
