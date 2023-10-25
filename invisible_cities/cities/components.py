@@ -1345,7 +1345,7 @@ def sort_hits(hits):
 def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
                                  , h5out          : tb.File
                                  , hit_type       : HitEnergy
-                                 , write_hits     : Optional[Callable] = None):
+                                 , write_hits     : Optional[Generator] = None):
     enough_hits = fl.map( lambda x : len(x) > 0
                         , args = 'hits'
                         , out  = 'enough_hits')
