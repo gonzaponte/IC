@@ -1370,7 +1370,7 @@ def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
 
     fork_pipes = filter(None, ( make_and_write_summary
                               , write_topology_filter
-                              , write_paolina_hits
+                              , write_hits
                               , select_and_write_tracks))
 
     return pipe( enough_hits
