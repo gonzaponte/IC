@@ -23,6 +23,7 @@ The city outputs :
 
 
 import tables as tb
+import pandas as pd
 
 from .. core.configure      import EventRangeType
 from .. core.configure      import OneOrManyFiles
