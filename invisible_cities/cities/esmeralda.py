@@ -147,7 +147,6 @@ def esmeralda( files_in       : OneOrManyFiles
         compute_tracks = compute_and_write_tracks_info( paolina_params
                                                       , h5out
                                                       , evm.HitEnergy.Ec
-                                                      , "high_th_select"
                                                       , write_paolina_hits)
 
         event_number_collector = collect()
