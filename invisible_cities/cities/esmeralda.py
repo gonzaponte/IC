@@ -59,8 +59,9 @@ from .. io.run_and_event_io import run_and_event_writer
 
 
 def hit_dropper(radius : float):
+    radius2 = radius**2
     def drop_hits(hits : pd.DataFrame) -> pd.DataFrame:
-        sel = hits.R < radius
+        sel = hits.X**2 + hits.Y**2 < radius2
         return hits.loc[sel]
 
     return drop_hits
