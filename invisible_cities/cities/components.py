@@ -1273,7 +1273,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
             return tracks, hits, True
 
         hits = hits.assign(Ep = hits.Ec, out_of_map = hits.Ec.isna())
-        out_of_map = p_hits.out_of_map.any()
+        out_of_map = hits.out_of_map.any()
 
         if len(hits) > 0 and (hits.Ep > 0).any():
             voxels           = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
