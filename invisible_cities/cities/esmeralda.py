@@ -33,6 +33,7 @@ The steps performed by Esmeralda are:
 #TODO: revisit summary. out_of_map field is outdated
 
 import tables as tb
+import pandas as pd
 
 from .. core.configure      import EventRangeType
 from .. core.configure      import OneOrManyFiles
