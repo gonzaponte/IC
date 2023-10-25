@@ -102,7 +102,7 @@ def isaura( files_in       : OneOrManyFiles
 
         compute_tracks = compute_and_write_tracks_info(paolina_params, h5out, hit_type=HitEnergy.E)
 
-        result = push(source = hits_and_kdst_from_files(files_in),
+        result = push(source = hits_and_kdst_from_files(files_in, "DECO", "Events"),
                       pipe   = pipe(fl.slice(*event_range, close_all=True)        ,
                                     print_every(print_mod)                        ,
                                     event_count_in        .spy                    ,
