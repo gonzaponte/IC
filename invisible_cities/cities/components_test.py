@@ -163,10 +163,10 @@ def test_hits_and_kdst_from_files(ICDATADIR):
     generator = hits_and_kdst_from_files([file_in], "RECO", "Events")
     output = next(generator)
     assert set(keys) == set(output.keys())
-    assert output['event_number']   == event_number
-    assert output['timestamp']      == timestamp
-    assert len(output['hits'].hits) == num_hits
-    assert type(output['kdst'])     == pd.DataFrame
+    assert output['event_number'] == event_number
+    assert output['timestamp']    == timestamp
+    assert len(output['hits'])    == num_hits
+    assert type(output['kdst'])   == pd.DataFrame
 
 
 def test_collect():
@@ -317,4 +317,3 @@ def test_check_max_time_units():
 
     with raises(ValueError):
         check_max_time(max_time, buffer_length)
-
