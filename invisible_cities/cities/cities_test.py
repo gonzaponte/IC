@@ -57,6 +57,8 @@ def test_city_output_file_is_compressed(config_tmpdir, ICDATADIR, city):
                         node.filters.complevel > 0)
 
             except tb.NoSuchNodeError:
+                # walk nodes yields also groups, not only leafs
+                # this skips groups
                 continue
 
 
