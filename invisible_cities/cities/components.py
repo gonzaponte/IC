@@ -1344,7 +1344,7 @@ def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
 
 
     # Define writers and make them sinks
-    write_tracks          = fl.sink(   track_writer     (h5out=h5out)             , args="topology_info")
+    write_tracks          = fl.sink(   track_writer     (h5out=h5out)             , args="tracks")
     write_summary         = fl.sink( summary_writer     (h5out=h5out)             , args="event_info"   )
     write_topology_filter = fl.sink( event_filter_writer(h5out, "topology_select"), args=("event_number", "topology_passed"))
     write_no_hits_filter  = fl.sink( event_filter_writer(h5out,     "hits_select"), args=("event_number",     "enough_hits"))
