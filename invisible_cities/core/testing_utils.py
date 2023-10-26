@@ -142,7 +142,7 @@ def assert_PMap_equality(pmp0, pmp1):
         assert_Peak_equality(s2_0, s2_1)
 
 
-def assert_tables_equality(got_table, expected_table, check_types=True):
+def assert_tables_equality(got_table, expected_table, check_types=True, rtol=1e-7, atol=0):
     table_got      =      got_table[:]
     table_expected = expected_table[:]
     assert len(table_got) == len(table_expected)
@@ -155,12 +155,12 @@ def assert_tables_equality(got_table, expected_table, check_types=True):
             expected = table_expected[col_name]
             assert type(got) == type(expected)
             try:
-                assert_allclose(got, expected)
+                assert_allclose(got, expected, rtol=rtol, atol=atol)
             except TypeError:
                 assert_equal   (got, expected)
     else:
         try:
-            assert_allclose(got_table, expected_table)
+            assert_allclose(got_table, expected_table, rtol=rtol, atol=atol)
         except TypeError:
             assert_equal   (got_table, expected_table)
 
