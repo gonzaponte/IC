@@ -104,7 +104,7 @@ def test_esmeralda_exact_result(esmeralda_config, Th228_tracks, config_tmpdir):
              , "Run/events", "Run/runInfo"
              , "DST/Events"
              , "Summary/Events"
-             , "Filters/high_th_select", "Filters/topology_select"
+             , "Filters/hits_select", "Filters/topology_select"
              , "MC/event_mapping", "MC/hits", "MC/particles", "MC/configuration")
 
     with tb.open_file(Th228_tracks) as true_output_file:
