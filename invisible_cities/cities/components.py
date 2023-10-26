@@ -845,7 +845,6 @@ def hit_builder(dbfile, run_number, drift_v,
     def build_hits(pmap, selector_output, event_number, timestamp):
         event_number = np.int64(event_number)
         hits = []
-        hitc = HitCollection(event_number, timestamp * 1e-3)
         s1_t = get_s1_time(pmap, selector_output)
 
         # here hits are computed for each peak and each slice.
