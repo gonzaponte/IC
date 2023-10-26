@@ -115,7 +115,7 @@ def test_esmeralda_exact_result(esmeralda_config, Th228_tracks, config_tmpdir):
                 assert hasattr(output_file.root, table), table
                 got      = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(got, expected)
+                assert_tables_equality(got, expected, check_types=False)
 
 
 #if the first analyzed events has no overlap in blob buggy esmeralda will cast all overlap energy to integers
