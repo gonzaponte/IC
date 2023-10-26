@@ -1279,7 +1279,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
             numb_of_tracks = len(tracks)
             track_energy   = plf.track_energy_calculator(hits)
             for track_id, track in enumerate(tracks):
-                hits_in_track  = hits.loc[hits.voxel.in1d(t.nodes())]
+                hits_in_track  = hits.loc[hits.voxel.isin(track.nodes()).values]
                 numb_of_hits   = len(hits_in_track)
                 numb_of_voxels = len(track.nodes())
                 x, y, z, e = hits_in_track.loc[:, "X Y Z Ep".split()].values.T
