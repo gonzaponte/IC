@@ -1294,8 +1294,8 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                 (E1, pos1, hits1, _) = blob1
                 (E2, pos2, hits2, _) = blob2
 
-                overlap = hits1.index.in1d(hits2.index).any()
                 list_of_vars = [event, track_id, track_energy, length,
+                overlap = hits1.index.isin(hits2.index).any()
                                 numb_of_voxels, numb_of_hits, numb_of_tracks,
                                 min(x), min(y), min(z), min(r),
                                 max(x), max(y), max(z), max(r),
