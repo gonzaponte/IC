@@ -1292,8 +1292,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                 r          = np.sqrt(x**2 + y**2)
                 ave         = lambda arg: np.average(arg, weights=e, axis=0)
 
-                distances            = plf.shortest_paths(t)
-                extr1, extr2, length = plf.find_extrema(distances)
+                extr1, extr2, length = plf.find_extrema(track)
                 extr1_pos = voxels.loc[extr1, list("XYZ")]
                 extr2_pos = voxels.loc[extr2, list("XYZ")]
 
