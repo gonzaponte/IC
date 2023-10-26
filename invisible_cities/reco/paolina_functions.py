@@ -446,3 +446,10 @@ def drop_end_point_voxels( hits       : pd.DataFrame
     dropped_hits   = pd.concat(dropped_hits  ) if dropped_hits   else hits  .iloc[:0]
     dropped_voxels = pd.concat(dropped_voxels) if dropped_voxels else voxels.iloc[:0]
     return hits, voxels, dropped_hits, dropped_voxels
+
+
+def track_energy_calculator(hits):
+    def track_energy(track):
+        sel = hits.voxel.in1d(track.nodes())
+        return hits[sel].Ep.sum()
+    return track_energy
