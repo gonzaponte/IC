@@ -140,7 +140,7 @@ def esmeralda( files_in       : OneOrManyFiles
         write_paolina_hits = fl.sink(hits_writer( h5out
                                                 , group_name = "CHITS"
                                                 , table_name = "highTh")
-                                    , args = "Ep_hits")
+                                    , args = "hits")
 
         write_kdst         = fl.sink( kdst_from_df_writer(h5out)
                                     , args = "kdst")

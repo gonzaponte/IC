@@ -1147,10 +1147,10 @@ def Efield_copier(energy_type: HitEnergy):
 
 
 @check_annotations
-def make_event_summary(event_number  : int          ,
-                       topology_info : pd.DataFrame ,
-                       paolina_hits  : HitCollection,
-                       out_of_map    : bool
+def make_event_summary(event_number : int         ,
+                       tracks       : pd.DataFrame,
+                       hits         : pd.DataFrame,
+                       out_of_map   : bool
                        ) -> pd.DataFrame:
     """
     For a given event number, timestamp, topology info dataframe, paolina hits and kdst information returns a
@@ -1159,14 +1159,14 @@ def make_event_summary(event_number  : int          ,
     Parameters
     ----------
     event_number  : int
-    topology_info : DataFrame
+    tracks        : DataFrame
         Dataframe containing track information,
         output of track_blob_info_creator_extractor
-    paolina_hits  : HitCollection
+    hits          : DataFrame
         Hits table passed through paolina functions,
         output of track_blob_info_creator_extractor
-    kdst          : DataFrame
-        Kdst information read from penthesilea output
+    out_of_map    : bool
+        Whether there are out_of_map hits
 
 
     Returns
@@ -1174,26 +1174,22 @@ def make_event_summary(event_number  : int          ,
     DataFrame containing relevant per event information.
     """
     es = pd.DataFrame(columns=list(types_dict_summary.keys()))
-    if len(paolina_hits.hits) == 0: return es
+    if len(hits) == 0: return es
 
-    ntrks = len(topology_info.index)
-    nhits = len(paolina_hits.hits)
+    ntrks = len(tracks)
+    nhits = len(hits)
 
-    S2ec = sum(h.Ec for h in paolina_hits.hits)
+    S2ec = hits.Ec.sum()
     S2qc = -1 #not implemented yet
 
-    pos   = [h.pos for h in paolina_hits.hits]
-    x, y, z = map(np.array, zip(*pos))
-    r = np.sqrt(x**2 + y**2)
-
-    e     = [h.Ec  for h in paolina_hits.hits]
-    ave_pos = np.average(pos, weights=e, axis=0)
-    ave_r   = np.average(r  , weights=e, axis=0)
-
+    x, y, z, e = hits.loc[:, "X Y Z Ec".split()].values.T
+    r          = np.sqrt(x**2 + y**2)
+    ave        = lambda arg: np.average(arg, weights=e, axis=0)
 
     list_of_vars  = [event_number, S2ec, S2qc, ntrks, nhits,
-                     *ave_pos, ave_r,
-                     min(x), min(y), min(z), min(r), max(x), max(y), max(z), max(r),
+                     ave(x), ave(y), ave(z), ave(r),
+                     min(x), min(y), min(z), min(r),
+                     max(x), max(y), max(z), max(r),
                      out_of_map]
 
     es.loc[0] = list_of_vars
@@ -1262,70 +1258,58 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
     A function that from a given DataFrame returns another DataFrame with per track information.
     """
     def create_extract_track_blob_info(hits : pd.DataFrame) -> pd.DataFrame:
-        tracks = pd.DataFrame(columns=list(types_dict_tracks.keys()))
+        tracks_df = pd.DataFrame(columns=list(types_dict_tracks.keys()))
         if len(hits) > max_num_hits:
-            return tracks, hits, True
+            return tracks_df, hits, True
 
-        hits = hits.assign(Ep = hits.Ec, out_of_map = hits.Ec.isna())
+        hits = hits.assign(Ep = hits.Ec, out_of_map = hits.Ec.isna(), track=-1)
         out_of_map = hits.out_of_map.any()
 
         if len(hits) > 0 and (hits.Ep > 0).any():
-            voxels           = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
-            (    mod_voxels,
-             dropped_voxels) = plf.drop_end_point_voxels(voxels, energy_threshold, min_voxels)
+            hits, voxels, vox_size = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
+            hits, voxels, dropped_hits, dropped_voxels = plf.drop_end_point_voxels(voxels, energy_threshold, min_voxels)
 
-            for v in dropped_voxels:
-                track_hitc.hits.extend(v.hits)
+            hits = pd.concat([hits, dropped_hits])
 
-            tracks = plf.make_track_graphs(mod_voxels)
+            tracks = plf.make_track_graphs(voxels)
             tracks = sorted(tracks, key=plf.get_track_energy, reverse=True)
 
-            vox_size_x = voxels[0].size[0]
-            vox_size_y = voxels[0].size[1]
-            vox_size_z = voxels[0].size[2]
-            del(voxels)
+            numb_of_tracks = len(tracks)
+            for track_id, track in enumerate(tracks):
+                track_energy   = plf.get_track_energy(track)
+                hits_in_track  = hits.loc[hits.voxel.in1d(t.nodes())]
+                numb_of_hits   = len(hits_in_track)
+                numb_of_voxels = len(track.nodes())
+                x, y, z, e = hits_in_track.loc[:, "X Y Z Ep".split()].values.T
+                r          = np.sqrt(x**2 + y**2)
+                ave         = lambda arg: np.average(arg, weights=e, axis=0)
 
-            track_hits = []
-            for c, t in enumerate(tracks, 0):
-                tID = c
-                energy = plf.get_track_energy(t)
-                numb_of_hits   = len([h for vox in t.nodes() for h in vox.hits])
-                numb_of_voxels = len(t.nodes())
-                numb_of_tracks = len(tracks   )
-                pos   = [h.pos for v in t.nodes() for h in v.hits]
-                x, y, z = map(np.array, zip(*pos))
-                r = np.sqrt(x**2 + y**2)
+                distances            = plf.shortest_paths(t)
+                extr1, extr2, length = plf.find_extrema(distances)
+                extr1_pos = voxels.loc[extr1, list("XYZ")]
+                extr2_pos = voxels.loc[extr2, list("XYZ")]
 
-                e     = [h.Ep for v in t.nodes() for h in v.hits]
-                ave_pos = np.average(pos, weights=e, axis=0)
-                ave_r   = np.average(r  , weights=e, axis=0)
-                distances = plf.shortest_paths(t)
-                extr1, extr2, length = plf.find_extrema_and_length(distances)
-                extr1_pos = extr1.XYZ
-                extr2_pos = extr2.XYZ
+                blob1, blob2 = plf.find_blobs(hits, voxels, vox_size, track, blob_radius, HitEnergy.Ep)
+                (E1, pos1, hits1, _) = blob1
+                (E2, pos2, hits2, _) = blob2
 
-                e_blob1, e_blob2, hits_blob1, hits_blob2, blob_pos1, blob_pos2 = plf.blob_energies_hits_and_centres(t, blob_radius)
+                overlap = hits1.index.in1d(hits2.index).any()
+                list_of_vars = [event, track_id, track_energy, length,
+                                numb_of_voxels, numb_of_hits, numb_of_tracks,
+                                min(x), min(y), min(z), min(r),
+                                max(x), max(y), max(z), max(r),
+                                ave(x), ave(y), ave(z), ave(r),
+                                *extr1_pos, *extr2_pos,
+                                *pos1, *pos2, E1, E2,
+                                overlap, *vox_size]
 
-                overlap = float(sum(h.Ep for h in set(hits_blob1).intersection(set(hits_blob2))))
-                list_of_vars = [hitc.event, tID, energy, length, numb_of_voxels,
-                                numb_of_hits, numb_of_tracks,
-                                min(x), min(y), min(z), min(r), max(x), max(y), max(z), max(r),
-                                *ave_pos, ave_r, *extr1_pos,
-                                *extr2_pos, *blob_pos1, *blob_pos2,
-                                e_blob1, e_blob2, overlap,
-                                vox_size_x, vox_size_y, vox_size_z]
+                tracks_df.loc[track_id] = list_of_vars
 
-                df.loc[c] = list_of_vars
-
-                for vox in t.nodes():
-                    for hit in vox.hits:
-                        hit.track_id = tID
-                        track_hits.append(hit)
+                hits.loc[hits_in_track.index, "track"] = track_id
 
             #change dtype of columns to match type of variables
-            df = df.apply(lambda x : x.astype(types_dict_tracks[x.name]))
-            track_hitc.hits.extend(track_hits)
-        return df, track_hitc, out_of_map
+            tracks_df = tracks_df.apply(lambda x : x.astype(types_dict_tracks[x.name]))
+        return tracks_df, hits, out_of_map
 
     return create_extract_track_blob_info
 
@@ -1344,17 +1328,17 @@ def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
     # Create tracks and compute topology-related information
     create_extract_track_blob_info = fl.map(track_blob_info_creator_extractor(**paolina_params),
                                             args = 'hits',
-                                            out  = ('topology_info', 'paolina_hits', 'out_of_map'))
+                                            out  = ('tracks', 'hits', 'out_of_map'))
 
     # Filter empty topology events
     filter_events_topology         = fl.map(lambda x : len(x) > 0,
-                                            args = 'topology_info',
+                                            args = 'tracks',
                                             out  = 'topology_passed')
     events_passed_topology         = fl.count_filter(bool, args="topology_passed")
 
     # Create table with summary information
     make_final_summary             = fl.map(make_event_summary,
-                                            args = ('event_number', 'topology_info', 'paolina_hits', 'out_of_map'),
+                                            args = ('event_number', 'tracks', 'hits', 'out_of_map'),
                                             out  = 'event_info')
 
 
