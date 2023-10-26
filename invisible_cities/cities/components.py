@@ -1282,8 +1282,8 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
             tracks = sorted(tracks, key=plf.track_energy_calculator(hits), reverse=True)
 
             numb_of_tracks = len(tracks)
+            track_energy   = plf.track_energy_calculator(hits)
             for track_id, track in enumerate(tracks):
-                track_energy   = plf.get_track_energy(track)
                 hits_in_track  = hits.loc[hits.voxel.in1d(t.nodes())]
                 numb_of_hits   = len(hits_in_track)
                 numb_of_voxels = len(track.nodes())
@@ -1300,8 +1300,8 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                 (E1, pos1, hits1, _) = blob1
                 (E2, pos2, hits2, _) = blob2
 
-                list_of_vars = [event, track_id, track_energy, length,
                 overlap = hits1.index.isin(hits2.index).any()
+                list_of_vars = [event, track_id, track_energy(track), length,
                                 numb_of_voxels, numb_of_hits, numb_of_tracks,
                                 min(x), min(y), min(z), min(r),
                                 max(x), max(y), max(z), max(r),
