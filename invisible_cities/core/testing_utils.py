@@ -142,11 +142,12 @@ def assert_PMap_equality(pmp0, pmp1):
         assert_Peak_equality(s2_0, s2_1)
 
 
-def assert_tables_equality(got_table, expected_table):
+def assert_tables_equality(got_table, expected_table, check_types=True):
     table_got      =      got_table[:]
     table_expected = expected_table[:]
-    assert len(table_got      ) == len(table_expected      )
-    assert len(table_got.dtype) == len(table_expected.dtype)
+    assert len(table_got) == len(table_expected)
+    if check_types:
+        assert len(table_got.dtype) == len(table_expected.dtype)
 
     if table_got.dtype.names is not None:
         for col_name in table_got.dtype.names:
