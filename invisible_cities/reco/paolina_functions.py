@@ -446,6 +446,6 @@ def drop_end_point_voxels( hits       : pd.DataFrame
 
 def track_energy_calculator(hits):
     def track_energy(track):
-        sel = hits.voxel.in1d(track.nodes())
-        return hits[sel].Ep.sum()
+        sel = hits.voxel.isin(track.nodes()).values
+        return hits.Ep.loc[sel].sum()
     return track_energy
