@@ -1273,13 +1273,13 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
         out_of_map = hits.out_of_map.any()
 
         if len(hits) > 0 and (hits.Ep > 0).any():
-            hits, voxels, vox_size = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
-            hits, voxels, dropped_hits, dropped_voxels = plf.drop_end_point_voxels(voxels, energy_threshold, min_voxels)
+            hits, voxels, actual_vox_size = plf.voxelize_hits(hits, vox_size, strict_vox_size, HitEnergy.Ep)
+            hits, voxels, dropped_hits, dropped_voxels = plf.drop_end_point_voxels(hits, voxels, actual_vox_size, energy_threshold, min_voxels, HitEnergy.Ep)
 
             hits = pd.concat([hits, dropped_hits])
 
-            tracks = plf.make_track_graphs(voxels)
-            tracks = sorted(tracks, key=plf.get_track_energy, reverse=True)
+            tracks = plf.make_track_graphs(voxels, actual_vox_size)
+            tracks = sorted(tracks, key=plf.track_energy_calculator(hits), reverse=True)
 
             numb_of_tracks = len(tracks)
             for track_id, track in enumerate(tracks):
@@ -1296,7 +1296,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                 extr1_pos = voxels.loc[extr1, list("XYZ")]
                 extr2_pos = voxels.loc[extr2, list("XYZ")]
 
-                blob1, blob2 = plf.find_blobs(hits, voxels, vox_size, track, blob_radius, HitEnergy.Ep)
+                blob1, blob2 = plf.find_blobs(hits, voxels, actual_vox_size, track, blob_radius, HitEnergy.Ep)
                 (E1, pos1, hits1, _) = blob1
                 (E2, pos2, hits2, _) = blob2
 
@@ -1308,7 +1308,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                                 ave(x), ave(y), ave(z), ave(r),
                                 *extr1_pos, *extr2_pos,
                                 *pos1, *pos2, E1, E2,
-                                overlap, *vox_size]
+                                overlap, *actual_vox_size]
 
                 tracks_df.loc[track_id] = list_of_vars
 
