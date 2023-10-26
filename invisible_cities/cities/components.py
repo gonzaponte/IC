@@ -844,6 +844,7 @@ def hit_builder(dbfile, run_number, drift_v,
 
     def build_hits(pmap, selector_output, event_number, timestamp):
         event_number = np.int64(event_number)
+        timestamp    = timestamp * 1e-3
         hits = []
         s1_t = get_s1_time(pmap, selector_output)
 
