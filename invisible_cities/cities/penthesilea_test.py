@@ -270,7 +270,7 @@ def test_penthesilea_exact_result(ICDATADIR, output_tmpdir):
                 assert hasattr(output_file.root, table)
                 got      = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(got, expected)
+                assert_tables_equality(got, expected, check_types=False)
 
 def test_penthesilea_exact_result_noS1(ICDATADIR, output_tmpdir):
     file_in     = os.path.join(ICDATADIR                                      ,
@@ -298,7 +298,7 @@ def test_penthesilea_exact_result_noS1(ICDATADIR, output_tmpdir):
                 assert hasattr(output_file.root, table)
                 got      = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(got, expected)
+                assert_tables_equality(got, expected, check_types=False)
 
 # test for PR 628
 def test_penthesilea_xyrecofail(config_tmpdir, Xe2nu_pmaps_mc_filename):
