@@ -31,7 +31,7 @@ def test_esmeralda_contains_all_tables(esmeralda_config, config_tmpdir):
             , "Summary", "Summary/Events"
             , "CHITS", "CHITS/highTh"
             , "Run", "Run/events", "Run/runInfo"
-            , "Filters", "Filters/high_th_select", "Filters/topology_select"
+            , "Filters", "Filters/hits_select", "Filters/topology_select"
             , "DST", "DST/Events")
 
     with tb.open_file(path_out) as h5out:
