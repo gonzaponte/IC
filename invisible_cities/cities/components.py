@@ -1265,6 +1265,7 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
     A function that from a given DataFrame returns another DataFrame with per track information.
     """
     def create_extract_track_blob_info(hits : pd.DataFrame) -> pd.DataFrame:
+        event     = hits.event.unique()[0]
         tracks_df = pd.DataFrame(columns=list(types_dict_tracks.keys()))
         if len(hits) > max_num_hits:
             return tracks_df, hits, True
