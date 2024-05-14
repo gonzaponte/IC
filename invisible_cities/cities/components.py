@@ -637,15 +637,23 @@ def dhits_from_files(paths: List[str]) -> Iterator[Dict[str,Union[HitCollection,
 
 def sensor_data(path, wf_type):
     with tb.open_file(path, "r") as h5in:
-        if   wf_type is WfType.rwf :   (pmt_wfs, sipm_wfs) = (h5in.root.RD .pmtrwf,   h5in.root.RD .sipmrwf)
-        elif wf_type is WfType.mcrd:   (pmt_wfs, sipm_wfs) = (h5in.root.    pmtrd ,   h5in.root.    sipmrd )
-        else                       :   raise TypeError(f"Invalid WfType: {type(wf_type)}")
-        _, NPMT ,  PMTWL =  pmt_wfs.shape
-        _, NSIPM, SIPMWL = sipm_wfs.shape
+        root     = h5in.root
+        wfs_pmt  = None
+        wfs_sipm = None
+        if   wf_type is WfType.rwf :
+            if "RD" in root and  "pmtrwf" in root.RD: wfs_pmt  = h5in.root.RD. pmtrwf
+            if "RD" in root and "sipmrwf" in root.RD: wfs_sipm = h5in.root.RD.sipmrwf
+        elif wf_type is WfType.mcrd:
+            if  "pmtrd" in root: wfs_pmt  = h5in.root. pmtrd
+            if "sipmrd" in root: wfs_sipm = h5in.root.sipmrd
+        else                       :
+            raise TypeError(f"Invalid WfType: {type(wf_type)}")
+        _, NPMT ,  PMTWL = wfs_pmt .shape if wfs_pmt  is not None else (0, 0, 0)
+        _, NSIPM, SIPMWL = wfs_sipm.shape if wfs_sipm is not None else (0, 0, 0)
         return SensorData(NPMT=NPMT, PMTWL=PMTWL, NSIPM=NSIPM, SIPMWL=SIPMWL)
 
-####### Transformers ########
 
+####### Transformers ########
 def build_pmap(detector_db, run_number, pmt_samp_wid, sipm_samp_wid,
                s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
                s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2):
