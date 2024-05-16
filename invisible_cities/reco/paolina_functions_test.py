@@ -29,7 +29,7 @@ from hypothesis.strategies import builds
 from . paolina_functions import BOXEPS
 from . paolina_functions import bounding_box
 from . paolina_functions import digitize
-from . paolina_functions import get_bins
+from . paolina_functions import get_bin_edges
 from . paolina_functions import distance_between_voxels
 from . paolina_functions import energy_of_voxels_within_radius
 from . paolina_functions import find_extrema
@@ -144,11 +144,11 @@ def test_digitize_contains_all_hits(hits, nbins):
 
 @mark.parametrize("strict", (False, True))
 @given(hits=sparse_hits(), vox_size=box_sizes)
-def test_get_bins(hits, vox_size, strict):
+def test_get_bin_edges(hits, vox_size, strict):
     if not len(hits): # TODO: deal with empty sequences
         return
 
-    bins_x, bins_y, bins_z = get_bins(hits, vox_size, strict)
+    bins_x, bins_y, bins_z = get_bin_edges(hits, vox_size, strict)
 
     assert (hits.X >= bins_x[ 0]).all()
     assert (hits.X <= bins_x[-1]).all()
