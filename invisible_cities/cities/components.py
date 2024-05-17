@@ -529,13 +529,8 @@ def pmap_from_files(paths):
             continue
 
         with tb.open_file(path, "r") as h5in:
-            try:
-                run_number  = get_run_number(h5in)
-                event_info  = get_event_info(h5in)
-            except tb.exceptions.NoSuchNodeError:
-                continue
-            except IndexError:
-                continue
+            run_number  = get_run_number(h5in)
+            event_info  = get_event_info(h5in)
 
             check_lengths(event_info, pmaps)
 
@@ -559,11 +554,8 @@ def hits_and_kdst_from_files( paths : List[str]
             continue
 
         with tb.open_file(path, "r") as h5in:
-            try:
-                run_number  = get_run_number(h5in)
-                event_info  = get_event_info(h5in)
-            except (tb.exceptions.NoSuchNodeError, IndexError):
-                continue
+            run_number  = get_run_number(h5in)
+            event_info  = get_event_info(h5in)
 
             check_lengths(event_info, hits_df.event.unique())
 
