@@ -17,6 +17,8 @@ from .. core.exceptions    import          SensorIDMismatch
 from .. core.exceptions    import              NoInputFiles
 from .. core.testing_utils import    assert_tables_equality
 from .. core               import system_of_units as units
+from .. reco.xy_algorithms import barycenter
+from .. types.ic_types     import xy
 from .. types.symbols      import WfType
 from .. types.symbols      import EventRange as ER
 from .. types.symbols      import XYReco
@@ -32,6 +34,7 @@ from .  components import hits_and_kdst_from_files
 from .  components import mcsensors_from_file
 from .  components import create_timestamp
 from .  components import check_max_time
+from .  components import try_global_reco
 
 from .. dataflow   import dataflow as fl
 
@@ -440,6 +443,7 @@ def test_check_max_time_units():
     with raises(ValueError):
         check_max_time(max_time, buffer_length)
 
+
 def test_read_wrong_pmt_ids(ICDATADIR):
     """
     The input file of this test contains sensor IDs that are not present in the database.
@@ -452,3 +456,15 @@ def test_read_wrong_pmt_ids(ICDATADIR):
     sns_gen = mcsensors_from_file([file_in], 'next100', run_number, rate)
     with raises(SensorIDMismatch):
         next(sns_gen)
+
+
+@mark.parametrize( "pos qs thr".split()
+                 , ( ([     ], [ ], 0) # no hits
+                   , ([[1,1]], [1], 2) # no hits above threshold
+                   ))
+def test_try_global_reco_creates_empty_cluster(pos, qs, thr):
+    pos, qs = np.array(pos), np.array(qs)
+    reco = lambda *args: barycenter(*args, Qthr=thr)
+    out  = try_global_reco(reco, pos, qs)
+    assert out.x == xy.empty().x
+    assert out.y == xy.empty().y
