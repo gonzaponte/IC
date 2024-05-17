@@ -10,6 +10,7 @@ extracts topology information. It produces the same output as Esmeralda.
 """
 
 import tables as tb
+import pandas as pd
 
 from .. core.configure      import EventRangeType
 from .. core.configure      import OneOrManyFiles
@@ -91,6 +92,7 @@ def isaura( files_in       : OneOrManyFiles
     event_count_out = fl.spy_count()
 
     filter_out_none = fl.filter(lambda x: x is not None, args = "kdst")
+    add_missing_fields = fl.map(field_adder, item="hits")
 
     with tb.open_file(file_out, "w", filters=tbl.filters(compression)) as h5out:
         write_event_info = fl.sink(run_and_event_writer(h5out), args=("run_number", "event_number", "timestamp"))
@@ -108,6 +110,7 @@ def isaura( files_in       : OneOrManyFiles
                                     event_count_in        .spy                    ,
                                     fl.branch("event_number", evtnum_collect.sink),
                                     event_count_out       .spy                    ,
+                                    add_missing_fields,
                                     fl.fork( compute_tracks
                                            , write_event_info
                                            , write_hits
@@ -122,3 +125,7 @@ def isaura( files_in       : OneOrManyFiles
                          detector_db, run_number)
 
         return result
+
+def field_adder(hits: pd.DataFrame) -> pd.DataFrame:
+    if "Ec" not in hits.columns: hits = hits.assign(Ec=hits.E)
+    return hits
