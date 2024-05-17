@@ -527,7 +527,7 @@ def test_energy_is_conserved_with_dropped_voxels(hits, vox_size, min_voxels, fra
     initial_track_energies.sort()
 
     e_thr = voxels.E.min() + fraction_zero_one * (voxels.E.max() - voxels.E.min())
-    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     final_energy = hits.E.sum()
     final_tracks =  make_track_graphs(voxels, vox_size)
@@ -547,7 +547,7 @@ def test_dropped_voxels_have_nan_energy(hits, vox_size, min_voxels, fraction_zer
     hits, voxels, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False, energy_type=energy_type)
     vox_e  = voxels[energy_type.value]
     e_thr  = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
-    _, _, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+    _, _, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type, Contiguity.CORNER)
 
     assert np.all(np.isnan(dropped_voxels[energy_type.value]))
     assert np.all(np.isnan(dropped_hits  [energy_type.value]))
@@ -567,7 +567,7 @@ def test_drop_end_point_voxels_doesnt_modify_other_energy_types(hits, vox_size, 
     vox_e = voxels[energy_type.value]
     e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
 
-    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type, Contiguity.CORNER)
     new_voxels = pd.concat([voxels, dropped_voxels])
     new_hits   = pd.concat([  hits, dropped_hits  ])
 
@@ -594,7 +594,7 @@ def test_drop_voxels_voxel_energy_is_sum_of_hits_general(hits, vox_size, min_vox
     vox_e = voxels[energy_type.value]
     e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
 
-    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type, Contiguity.CORNER)
 
 
     for i, v in voxels.iterrows():
@@ -616,7 +616,7 @@ def test_drop_end_point_voxels_constant_number_of_voxels_and_hits(hits, vox_size
     vox_e = voxels[energy_type.value]
     e_thr = vox_e.min() + fraction_zero_one * (vox_e.max() - vox_e.min())
 
-    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type)
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, energy_type, Contiguity.CORNER)
 
     n_voxels_after = len(voxels)
     n_hits_after   = len(hits)
@@ -648,7 +648,7 @@ def test_initial_voxels_are_the_same_after_dropping_voxels(tracks_from_data):
     original_hits   =   hits.copy()
     original_voxels = voxels.copy()
 
-    drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+    drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     assert_dataframes_equal(original_hits  , hits)
     assert_dataframes_equal(original_voxels, voxels)
@@ -665,7 +665,7 @@ def test_tracks_with_dropped_voxels(tracks_from_data):
     initial_energies    = [voxels.loc[list(t.nodes()), etype.value].sum() for t in initial_tracks]
     initial_n_voxels    = np.array([len(t.nodes()) for t in initial_tracks])
 
-    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype)
+    hits, voxels, dropped_hits, dropped_voxels = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     final_tracks      = make_track_graphs(voxels, vox_size)
     final_n_of_tracks = len(final_tracks)
@@ -685,11 +685,11 @@ def test_drop_voxels_deterministic(tracks_from_data):
     hits0, voxels0, vox_size = voxelize_hits(hits, vox_size, strict_voxel_size=False)
     hits0   =   hits0.sort_values(etype.value, ascending=True)
     voxels0 = voxels0.sort_values(etype.value, ascending=True)
-    hits1, voxels1, _, _ = drop_end_point_voxels(hits0.copy(), voxels0.copy(), vox_size, e_thr, min_voxels, etype)
+    hits1, voxels1, _, _ = drop_end_point_voxels(hits0.copy(), voxels0.copy(), vox_size, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     hits0   =   hits0.sort_values(etype.value, ascending=False)
     voxels0 = voxels0.sort_values(etype.value, ascending=False)
-    hits2, voxels2, _, _ = drop_end_point_voxels(hits0, voxels0, vox_size, e_thr, min_voxels, etype)
+    hits2, voxels2, _, _ = drop_end_point_voxels(hits0, voxels0, vox_size, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     assert_dataframes_close(  hits1.sort_values(etype.value),   hits2.sort_values(etype.value))
     assert_dataframes_close(voxels1.sort_values(etype.value), voxels2.sort_values(etype.value))
@@ -721,7 +721,7 @@ def test_voxel_drop_in_short_tracks():
     e_thr      = voxels.E.sum() + 1
     min_voxels = 0
 
-    _, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, HitEnergy.E)
+    _, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, HitEnergy.E, Contiguity.CORNER)
 
     assert len(voxels) >= 1
 
@@ -744,7 +744,7 @@ def test_drop_voxels_voxel_energy_is_sum_of_hits():
     vox_size   = [5] * 3
     min_voxels = 1
 
-    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, e_type)
+    hits, voxels, _, _ = drop_end_point_voxels(hits, voxels, vox_size, e_thr, min_voxels, e_type, Contiguity.CORNER)
 
     for i, voxel in voxels.iterrows():
         hits_in_voxel = hits.loc[hits.voxel==i]
@@ -852,7 +852,7 @@ def test_paolina_functions_with_hit_energy_different_from_default_value(hits, vo
 
     # Test that this function doesn't fail
     min_voxels = 0
-    hits_c, voxels_c, dropped_hits_c, _ = drop_end_point_voxels(hits_c, voxels_c, vox_size_c, e_thr, min_voxels, etype)
+    hits_c, voxels_c, dropped_hits_c, _ = drop_end_point_voxels(hits_c, voxels_c, vox_size_c, e_thr, min_voxels, etype, Contiguity.CORNER)
 
     modified_energy   = voxels_c.E           .sum()
     modified_energy_c = voxels_c[etype.value].sum()
