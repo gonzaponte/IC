@@ -7,15 +7,19 @@ from .. core.testing_utils   import assert_tables_equality
 from .. core.system_of_units import pes
 from .  sophronia            import sophronia
 
-def test_sophronia_runs(sophronia_config, config_tmpdir):
+
+@mark.parametrize("corrections", (True, False))
+def test_sophronia_runs(sophronia_config, config_tmpdir, corrections):
     path_out = os.path.join(config_tmpdir, 'sophronia_runs.h5')
     nevt_req = 1
     config   = dict(**sophronia_config)
     config.update(dict(file_out    = path_out,
                        event_range = nevt_req))
+    if not corrections:
+        del config["corrections_file"]
 
     cnt = sophronia(**config)
-    assert cnt.events_in   == nevt_req
+    assert cnt.events_in == nevt_req
 
 
 def test_sophronia_contains_all_tables(sophronia_config, config_tmpdir):
