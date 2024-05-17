@@ -1376,7 +1376,7 @@ def compute_and_write_tracks_info( paolina_params : Dict[str, Any]
                , create_extract_track_blob_info
                , sort_hits_
                , filter_events_topology
-               , fl.branch(fl.fork(*fork_pipes))
+               , fl.fork(*fork_pipes)
                )
 
 
