@@ -35,6 +35,7 @@ from .  components import mcsensors_from_file
 from .  components import create_timestamp
 from .  components import check_max_time
 from .  components import try_global_reco
+from .  components import length_of
 
 from .. dataflow   import dataflow as fl
 
@@ -468,3 +469,9 @@ def test_try_global_reco_creates_empty_cluster(pos, qs, thr):
     out  = try_global_reco(reco, pos, qs)
     assert out.x == xy.empty().x
     assert out.y == xy.empty().y
+
+
+@mark.parametrize("t", (int, float, object))
+def test_length_of_incorrect_type(t):
+    with raises(TypeError, match="Cannot determine size of .*"):
+        length_of(t())
