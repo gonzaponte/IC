@@ -152,10 +152,13 @@ def calibrate_sipms(sipm_wfs, adc_to_pes, thr, *, bls_mode=BlsMode.mode):
     Subtracts the baseline, calibrates waveforms to pes
     and suppresses values below `thr` (in pes).
     """
-    thr  = to_col_vector(np.full(sipm_wfs.shape[0], thr))
+    # Runtime optimized
+    # - Each function called has been optimized independently
+    # - zero suppression done in place
     bls  = subtract_baseline(sipm_wfs, bls_mode=bls_mode)
     cwfs = calibrate_wfs(bls, adc_to_pes)
-    return np.where(cwfs > thr, cwfs, 0)
+    cwfs[cwfs<=thr] = 0
+    return cwfs
 
 
 def subtract_mean  (wfs): return subtract_baseline(wfs, bls_mode=BlsMode.mean  )
