@@ -125,11 +125,19 @@ def calibrate_pmts(cwfs, adc_to_pes, n_maw=100, thr_maw=3):
     be applied for S1 searches (the calibrated version
     without the MAW should be applied for S2 searches).
     """
+    # Runtime optimized
+    # - maw algorithm revisited and replaced by a faster one
+    # - threshold suppression on maw performed in place
+    # - reuse cwfs variable to avoid copying data
     maw = uniform_filter1d(cwfs, size=n_maw, axis=1, mode="reflect", origin=n_maw//2-1)
 
     # ccwfs stands for calibrated corrected waveforms
-    ccwfs       = calibrate_wfs(cwfs, adc_to_pes)
-    ccwfs_maw   = np.where(cwfs >= maw + thr_maw, ccwfs, 0)
+    ccwfs     = calibrate_wfs(cwfs, adc_to_pes)
+
+    # The variable `cwfs` is no longer needed so we reuse them to
+    # compute ccwfs_maw
+    cwfs[cwfs < maw + thr_maw] = 0
+    ccwfs_maw = cwfs
 
     cwf_sum     = np.sum(ccwfs    , axis=0)
     cwf_sum_maw = np.sum(ccwfs_maw, axis=0)
