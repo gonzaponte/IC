@@ -98,13 +98,18 @@ def subtract_baseline(wfs, *, bls_mode=BlsMode.mean):
 
 def calibrate_wfs(wfs, adc_to_pes):
     """
-    Convert waveforms in adc to pes. Masked channels
-    are ignored.
+    Convert waveforms in adc to pes. Masked channels (determined by
+    their adc_to_pes value) are ignored.
     """
-    adc_to_pes = to_col_vector(adc_to_pes)
-    ok         = adc_to_pes > 0
-    out        = np.zeros(wfs.shape, dtype=float)
-    return np.divide(wfs, adc_to_pes, out=out, where=ok)
+    # Runtime optimzed
+    # - fast copy using astype, which we need to do anyway
+    # - adc_to_pes reshaped which does not make a copy
+    # - division in place to avoid making a copy
+    # - setting to 0 masked channels in place to avoid making a copy
+    wfs  = wfs.astype(float)
+    wfs /= adc_to_pes.reshape(adc_to_pes.size, 1)
+    wfs[adc_to_pes <= 0, :] = 0
+    return wfs
 
 
 def subtract_baseline_and_calibrate(sipm_wfs, adc_to_pes, *, bls_mode=BlsMode.mean):
