@@ -1,6 +1,6 @@
 import numpy        as np
-import scipy.signal as signal
 import scipy.stats  as stats
+from scipy.ndimage import uniform_filter1d
 
 from functools import wraps
 
@@ -125,8 +125,7 @@ def calibrate_pmts(cwfs, adc_to_pes, n_maw=100, thr_maw=3):
     be applied for S1 searches (the calibrated version
     without the MAW should be applied for S2 searches).
     """
-    window      = np.full(n_maw, 1 / n_maw)
-    maw         = signal.lfilter(window, 1, cwfs, axis=1)
+    maw = uniform_filter1d(cwfs, size=n_maw, axis=1, mode="reflect", origin=n_maw//2-1)
 
     # ccwfs stands for calibrated corrected waveforms
     ccwfs       = calibrate_wfs(cwfs, adc_to_pes)
@@ -141,9 +140,7 @@ def pmt_subtract_maw(cwfs, n_maw=100):
     """
     Subtract a MAW from the input waveforms.
     """
-    window = np.full(n_maw, 1 / n_maw)
-    maw    = signal.lfilter(window, 1, cwfs, axis=1)
-
+    maw = uniform_filter1d(cwfs, size=n_maw, axis=1, mode="reflect", origin=n_maw//2-1)
     return cwfs - maw
 
 
