@@ -62,10 +62,9 @@ def zero_masked(fn):
 median = zero_masked(np.ma.median)
 mean   = zero_masked(np.ma.mean)
 
-
-def means  (wfs): return to_col_vector(mean  (wfs, axis=1))
-def medians(wfs): return to_col_vector(median(wfs, axis=1))
-def modes  (wfs): return to_col_vector(mode  (wfs, axis=1))
+def means  (wfs): return mean  (wfs, axis=1, keepdims=True)
+def medians(wfs): return median(wfs, axis=1, keepdims=True)
+def modes  (wfs): return mode  (wfs, axis=1, keepdims=True)
 
 
 def subtract_baseline(wfs, *, bls_mode=BlsMode.mean):
