@@ -23,16 +23,27 @@ def scipy_mode(x, axis=0):
     return m
 
 
-def mode(wfs, axis=0):
+def mode(wfs, axis=0, keepdims=False):
     """
     A fast calculation of the mode: it runs 10 times
     faster than the SciPy version but only applies to
     positive waveforms.
     """
+    # Runtime optimized
+    # - Avoid discarding zeros (which implies looping over the waveform)
+    # - Count zeros, but ignore them to find the max
+    # - This can result in an empty sequence if the waveform is all
+    #   zeros, so we deal with it explicitly.
     def wf_mode(wf):
-        positive = wf > 0
-        return np.bincount(wf[positive]).argmax() if np.count_nonzero(positive) else 0
-    return np.apply_along_axis(wf_mode, axis, wfs).astype(float)
+        try              : return np.bincount(wf)[1:].argmax() + 1
+        except ValueError: return 0 # if all zeros
+    out = np.apply_along_axis(wf_mode, axis, wfs).astype(float)
+    if keepdims:
+        # mimic keepdims behaviour in other np functions
+        shape = list(wfs.shape)
+        shape[axis] = 1
+        out = out.reshape(*shape)
+    return out
 
 
 def zero_masked(fn):
