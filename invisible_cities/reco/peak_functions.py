@@ -58,9 +58,14 @@ def pick_slice_and_rebin(indices, times, widths,
         times_  = np.concatenate([np.zeros(        n_miss) ,  times_])
         widths_ = np.concatenate([np.zeros(        n_miss) , widths_])
         wfs_    = np.concatenate([np.zeros((n_wfs, n_miss)),    wfs_], axis=1)
+
+    if rebin_stride < 2:
+        return times_, widths_, wfs_
+
+    indices = np.arange(0, len(times_), rebin_stride)
     (times ,
      widths,
-     wfs   ) = rebin_times_and_waveforms(times_, widths_, wfs_, rebin_stride)
+     wfs   ) = rebin_times_and_waveforms(times_, widths_, wfs_, indices)
     return times, widths, wfs
 
 
@@ -179,29 +184,48 @@ def get_pmap(event, ccwf, s1_indx, s2_indx, sipm_zs_wf,
 
     return s1, s1pmt, s2, s2pmt, s2si
 
-def rebin_times_and_waveforms(times, widths, waveforms,
-                              rebin_stride=2, slices=None):
-    if rebin_stride < 2: return times, widths, waveforms
+def rebin_times_and_waveforms(times, widths, waveforms, indices):
+    """
+    Groups together consecutive samples and aggregates them together
+    into a single one. Times are averaged using the waveform samples
+    as weights, while widths and waveform samples are summed up. The
+    number of consecutive slices taken is determined by `indices`,
+    which mark the start of each slice.
 
-    if slices is None:
-        n_bins = int(np.ceil(len(times) / rebin_stride))
-        reb    = rebin_stride
-        slices = [slice(reb * i, reb * (i + 1)) for i in range(n_bins)]
-    n_sensors = waveforms.shape[0]
+    Parameters
+    ----------
+    times : np.ndarray (n_samples,)
+        Array of buffer times
 
-    rebinned_times  = np.zeros(            len(slices) )
-    rebinned_widths = np.zeros(            len(slices) )
-    rebinned_wfs    = np.zeros((n_sensors, len(slices)))
+    widths : np.ndarray (n_samples,)
+        Array of sample widths
 
-    for i, sl in enumerate(slices):
-        t = times    [   sl]
-        e = waveforms[:, sl]
-        ## Weight with the charge sum per slice
-        ## if positive and unweighted if all
-        ## negative.
-        s = np.sum(e, axis=0).clip(0)
-        w = s if np.any(s) else None
-        rebinned_times [   i] = np.average(t, weights=w)
-        rebinned_widths[   i] = np.sum    (  widths[sl])
-        rebinned_wfs   [:, i] = np.sum    (e,    axis=1)
-    return rebinned_times, rebinned_widths, rebinned_wfs
+    waveforms : np.ndarray (n_sensors, n_samples)
+        Waveform values
+
+    rebin_stride: np.ndarray (n_new_samples,)
+        Indices that mark the lower bound of each new sample
+
+    Returns
+    -------
+    times : np.ndarray (n_new_samples,)
+        Array of resampled buffer times
+
+    widths : np.ndarray (n_new_samples,)
+        Array of resampled sample widths
+
+    waveforms : np.ndarray (n_sensors, n_new_samples)
+        Resampled waveform values
+    """
+    # Runtime optimized
+    # - Slice loop moved to numpy via np.add.reduceat
+    # - Weighted average performed by hand inseat of using np.average,
+    #   not because it's faster per se, but because it allows us to
+    #   skip the external loop over slices
+    # - indices are now given as arguments, since they don't need to
+    #   be computed every time
+    enes      = waveforms.sum(axis=0)
+    widths    = np.add.reduceat(widths    , indices)
+    waveforms = np.add.reduceat(waveforms , indices, axis=1)
+    times     = np.add.reduceat(times*enes, indices) / waveforms.sum(axis=0)
+    return times, widths, waveforms
