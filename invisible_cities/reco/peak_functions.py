@@ -121,8 +121,6 @@ def find_peaks(ccwfs, index,
                pmt_samp_wid = 25*units.ns,
                sipm_samp_wid = 1*units.mus,
                sipm_wfs=None, thr_sipm_s2=0):
-    ccwfs = np.array(ccwfs, ndmin=2)
-
     peaks           = []
     times           = np.arange     (ccwfs.shape[1]) * pmt_samp_wid
     widths          = np.full       (ccwfs.shape[1],   pmt_samp_wid)
