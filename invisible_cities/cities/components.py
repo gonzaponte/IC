@@ -407,7 +407,8 @@ def check_nonempty_indices(s1_indices, s2_indices):
 
 
 def check_empty_pmap(pmap):
-    return bool(pmap.s1s) or bool(pmap.s2s)
+    s1, _, s2, *_ = pmap
+    return len(s1) or len(s2)
 
 
 def length_of(iterable):
@@ -675,8 +676,8 @@ def build_pmap(detector_db, run_number, pmt_samp_wid, sipm_samp_wid,
     datapmt = load_db.DataPMT(detector_db, run_number)
     pmt_ids = datapmt.SensorID[datapmt.Active.astype(bool)].values
 
-    def build_pmap(ccwf, s1_indx, s2_indx, sipmzs): # -> PMap
-        return pkf.get_pmap(ccwf, s1_indx, s2_indx, sipmzs,
+    def build_pmap(event, ccwf, s1_indx, s2_indx, sipmzs): # -> PMap
+        return pkf.get_pmap(event, ccwf, s1_indx, s2_indx, sipmzs,
                             s1_params, s2_params, thr_sipm_s2, pmt_ids,
                             pmt_samp_wid, sipm_samp_wid)
 
@@ -1017,8 +1018,8 @@ def compute_and_write_pmaps(detector_db, run_number, pmt_samp_wid, sipm_samp_wid
     compute_pmap     = fl.map(build_pmap(detector_db, run_number, pmt_samp_wid, sipm_samp_wid,
                                          s1_lmax, s1_lmin, s1_rebin_stride, s1_stride, s1_tmax, s1_tmin,
                                          s2_lmax, s2_lmin, s2_rebin_stride, s2_stride, s2_tmax, s2_tmin, thr_sipm_s2),
-                              args = ("ccwfs", "s1_indices", "s2_indices", "sipm"),
-                              out  = "pmap")
+                              args = ("event_number", "ccwfs", "s1_indices", "s2_indices", "sipm"),
+                              out  = ("pmap"))
 
     # Filter events with zero peaks
     pmaps_pass      = fl.map(check_empty_pmap, args = "pmap", out = "pmaps_pass")
@@ -1030,7 +1031,7 @@ def compute_and_write_pmaps(detector_db, run_number, pmt_samp_wid, sipm_samp_wid
     write_pmap_filter_  = event_filter_writer(h5out, "empty_pmap" )
 
     # ... and make them sinks
-    write_pmap         = sink(write_pmap_        , args=(        "pmap", "event_number"))
+    write_pmap         = sink(write_pmap_        , args="pmap")
     write_indx_filter  = sink(write_indx_filter_ , args=("event_number", "indices_pass"))
     write_pmap_filter  = sink(write_pmap_filter_ , args=("event_number",   "pmaps_pass"))
 

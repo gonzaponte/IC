@@ -9,6 +9,7 @@ last revised: @abotas & @gonzaponte. Dec 1st 2017
 """
 
 import numpy        as np
+import pandas       as pd
 
 from .. core               import system_of_units as units
 from .. evm .ic_containers import ZsWf
@@ -70,9 +71,16 @@ def build_pmt_responses(indices, times, widths, ccwf,
      pk_widths,
      pmt_wfs  ) = pick_slice_and_rebin(indices, times, widths,
                                        ccwf   , rebin_stride,
-                                       pad_zeros = pad_zeros,
+                                       pad_zeros          = pad_zeros,
                                        sipm_pmt_bin_ratio = sipm_pmt_bin_ratio)
-    return pk_times, pk_widths, PMTResponses(pmt_ids, pmt_wfs)
+
+    pk_sum   = pd.DataFrame(dict( time   = pk_times
+                                , bwidth = pk_widths
+                                , ene    = pmt_wfs.sum(axis=0)))
+
+    pk_split = pd.DataFrame(dict( npmt = np.repeat(pmt_ids, pk_times.size)
+                                , ene  = pmt_wfs.flatten()))
+    return pk_sum, pk_split
 
 
 def build_sipm_responses(indices, times, widths,
@@ -83,7 +91,10 @@ def build_sipm_responses(indices, times, widths,
     (sipm_ids,
      sipm_wfs)   = select_wfs_above_time_integrated_thr(sipm_wfs_,
                                                         thr_sipm_s2)
-    return SiPMResponses(sipm_ids, sipm_wfs)
+
+    sipm_ids = np.repeat(sipm_ids, sipm_wfs.shape[1])
+    return pd.DataFrame(dict( nsipm = sipm_ids
+                            , ene   = sipm_wfs.flatten()))
 
 
 def build_peak(indices, times,
@@ -95,23 +106,21 @@ def build_peak(indices, times,
                sipm_wfs      = None,
                thr_sipm_s2   = 0):
     sipm_pmt_bin_ratio = int(sipm_samp_wid/pmt_samp_wid)
-    (pk_times ,
-     pk_widths,
-     pmt_r    ) = build_pmt_responses(indices, times, widths,
-                                     ccwf, pmt_ids,
-                                     rebin_stride, pad_zeros = with_sipms,
-                                     sipm_pmt_bin_ratio = sipm_pmt_bin_ratio)
+    pmt_sum, pmt_split = build_pmt_responses(indices, times, widths,
+                                             ccwf, pmt_ids,
+                                             rebin_stride, pad_zeros = with_sipms,
+                                             sipm_pmt_bin_ratio = sipm_pmt_bin_ratio)
     if with_sipms:
-        sipm_r = build_sipm_responses(indices // sipm_pmt_bin_ratio,
-                                      times // sipm_pmt_bin_ratio,
-                                      widths * sipm_pmt_bin_ratio,
-                                      sipm_wfs,
-                                      rebin_stride // sipm_pmt_bin_ratio,
-                                      thr_sipm_s2)
+       sipm  = build_sipm_responses(indices // sipm_pmt_bin_ratio,
+                                    times // sipm_pmt_bin_ratio,
+                                    widths * sipm_pmt_bin_ratio,
+                                    sipm_wfs,
+                                    rebin_stride // sipm_pmt_bin_ratio,
+                                    thr_sipm_s2)
     else:
-        sipm_r = SiPMResponses.build_empty_instance()
+        sipm = pd.DataFrame()
 
-    return Pk(pk_times, pk_widths, pmt_r, sipm_r)
+    return pmt_sum, pmt_split, sipm
 
 
 def find_peaks(ccwfs, index,
@@ -124,36 +133,51 @@ def find_peaks(ccwfs, index,
     ccwfs = np.array(ccwfs, ndmin=2)
 
     peaks           = []
-    times           = np.arange     (ccwfs.shape[1]) * pmt_samp_wid
+    times           = np.arange     (0, ccwfs.shape[1] * pmt_samp_wid, pmt_samp_wid)
     widths          = np.full       (ccwfs.shape[1],   pmt_samp_wid)
     indices_split   = split_in_peaks(index, stride)
     selected_splits = select_peaks  (indices_split, time, length, pmt_samp_wid)
     with_sipms      = Pk is S2 and sipm_wfs is not None
 
-    for indices in selected_splits:
-        pk = build_peak(indices, times,
-                        widths, ccwfs, pmt_ids,
-                        rebin_stride,
-                        with_sipms, Pk,
-                        pmt_samp_wid, sipm_samp_wid,
-                        sipm_wfs, thr_sipm_s2)
-        peaks.append(pk)
-    return peaks
+    pmt_sums   = []
+    pmt_splits = []
+    sipms      = []
+    for peak_no, indices in enumerate(selected_splits):
+        pmt_sum, pmt_split, sipm = build_peak(indices, times,
+                                              widths, ccwfs, pmt_ids,
+                                              rebin_stride,
+                                              with_sipms, Pk,
+                                              pmt_samp_wid, sipm_samp_wid,
+                                              sipm_wfs, thr_sipm_s2)
+        pmt_sum  .insert(0, "peak", peak_no)
+        pmt_split.insert(0, "peak", peak_no)
+        sipm     .insert(0, "peak", peak_no)
+        pmt_sums  .append(pmt_sum  )
+        pmt_splits.append(pmt_split)
+        sipms     .append(sipm     )
+
+    pmt_sums   = pd.concat(pmt_sums  , ignore_index=True)
+    pmt_splits = pd.concat(pmt_splits, ignore_index=True)
+    sipms      = pd.concat(sipms     , ignore_index=True)
+    return pmt_sums, pmt_splits, sipms
 
 
-def get_pmap(ccwf, s1_indx, s2_indx, sipm_zs_wf,
+def get_pmap(event, ccwf, s1_indx, s2_indx, sipm_zs_wf,
              s1_params, s2_params, thr_sipm_s2, pmt_ids,
              pmt_samp_wid, sipm_samp_wid):
-    return PMap(find_peaks(ccwf, s1_indx, Pk=S1, pmt_ids=pmt_ids,
-                           pmt_samp_wid=pmt_samp_wid,
-                           **s1_params),
-                find_peaks(ccwf, s2_indx, Pk=S2, pmt_ids=pmt_ids,
-                           sipm_wfs      = sipm_zs_wf,
-                           thr_sipm_s2   = thr_sipm_s2,
-                           pmt_samp_wid  = pmt_samp_wid,
-                           sipm_samp_wid = sipm_samp_wid,
-                           **s2_params))
+    s1, s1pmt, _ = find_peaks(ccwf, s1_indx, Pk=S1, pmt_ids=pmt_ids,
+                              pmt_samp_wid=pmt_samp_wid,
+                              **s1_params)
+    s2, s2pmt, s2si = find_peaks(ccwf, s2_indx, Pk=S2, pmt_ids=pmt_ids,
+                                 sipm_wfs      = sipm_zs_wf,
+                                 thr_sipm_s2   = thr_sipm_s2,
+                                 pmt_samp_wid  = pmt_samp_wid,
+                                 sipm_samp_wid = sipm_samp_wid,
+                                 **s2_params)
+    for df in (s1, s1pmt, s2, s2pmt, s2si):
+        df.insert(0, "event", event)
 
+    return s1, s1pmt, s2, s2pmt, s2si
 
 def rebin_times_and_waveforms(times, widths, waveforms,
                               rebin_stride=2, slices=None):

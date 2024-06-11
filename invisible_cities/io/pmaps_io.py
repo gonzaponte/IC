@@ -12,6 +12,8 @@ from .. evm .pmaps         import PMap
 from .. evm                import nh5     as table_formats
 from .. reco.tbl_functions import filters as tbl_filters
 
+from . dst_io import df_writer
+
 
 def store_peak(pmt_table, pmti_table, si_table,
                peak, peak_number, event_number):
@@ -46,17 +48,17 @@ def store_peak(pmt_table, pmti_table, si_table,
             si_row.append()
 
 
-def store_pmap(tables, pmap, event_number):
-    s1_table, s2_table, si_table, s1i_table, s2i_table = tables
-    for peak_number, s1 in enumerate(pmap.s1s):
-        store_peak(s1_table, s1i_table,     None, s1, peak_number, event_number)
-    for peak_number, s2 in enumerate(pmap.s2s):
-        store_peak(s2_table, s2i_table, si_table, s2, peak_number, event_number)
+def store_pmap(file, pmap):
+    s1, s1pmt, s2, s2pmt, s2si = pmap
+    if len(s1   ): df_writer(file, s1   , "PMAPS", "S1"   , "S1 in PMT sum"  , columns_to_index=["event"])
+    if len(s1pmt): df_writer(file, s1pmt, "PMAPS", "S1Pmt", "S1 in each PMT" , columns_to_index=["event"])
+    if len(s2   ): df_writer(file, s2   , "PMAPS", "S2"   , "S2 in PMT sum"  , columns_to_index=["event"])
+    if len(s2pmt): df_writer(file, s2pmt, "PMAPS", "S2Pmt", "S2 in each PMT" , columns_to_index=["event"])
+    if len(s2si ): df_writer(file, s2si , "PMAPS", "S2Si" , "S2 in each SiPM", columns_to_index=["event"])
 
 
 def pmap_writer(file, *, compression=None):
-    tables = _make_tables(file, compression)
-    return partial(store_pmap, tables)
+    return partial(store_pmap, file)
 
 
 def _make_tables(hdf5_file, compression):
