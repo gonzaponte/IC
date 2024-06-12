@@ -105,7 +105,7 @@ def build_sipm_responses(indices, times, widths,
 def build_peak(indices, times,
                widths, ccwf, pmt_ids,
                rebin_stride,
-               with_sipms, Pk,
+               with_sipms,
                pmt_samp_wid  = 25 * units.ns,
                sipm_samp_wid =  1 * units.mus,
                sipm_wfs      = None,
@@ -131,7 +131,7 @@ def build_peak(indices, times,
 def find_peaks(ccwfs, index,
                time, length,
                stride, rebin_stride,
-               Pk, pmt_ids,
+               pmt_ids,
                pmt_samp_wid = 25*units.ns,
                sipm_samp_wid = 1*units.mus,
                sipm_wfs=None, thr_sipm_s2=0):
@@ -142,7 +142,7 @@ def find_peaks(ccwfs, index,
     widths          = np.full       (ccwfs.shape[1],   pmt_samp_wid)
     indices_split   = split_in_peaks(index, stride)
     selected_splits = select_peaks  (indices_split, time, length, pmt_samp_wid)
-    with_sipms      = Pk is S2 and sipm_wfs is not None
+    with_sipms      = sipm_wfs is not None
 
     pmt_sums   = []
     pmt_splits = []
@@ -151,7 +151,7 @@ def find_peaks(ccwfs, index,
         pmt_sum, pmt_split, sipm = build_peak(indices, times,
                                               widths, ccwfs, pmt_ids,
                                               rebin_stride,
-                                              with_sipms, Pk,
+                                              with_sipms,
                                               pmt_samp_wid, sipm_samp_wid,
                                               sipm_wfs, thr_sipm_s2)
         pmt_sum  .insert(0, "peak", peak_no)
@@ -170,10 +170,10 @@ def find_peaks(ccwfs, index,
 def get_pmap(event, ccwf, s1_indx, s2_indx, sipm_zs_wf,
              s1_params, s2_params, thr_sipm_s2, pmt_ids,
              pmt_samp_wid, sipm_samp_wid):
-    s1, s1pmt, _ = find_peaks(ccwf, s1_indx, Pk=S1, pmt_ids=pmt_ids,
+    s1, s1pmt, _ = find_peaks(ccwf, s1_indx, pmt_ids=pmt_ids,
                               pmt_samp_wid=pmt_samp_wid,
                               **s1_params)
-    s2, s2pmt, s2si = find_peaks(ccwf, s2_indx, Pk=S2, pmt_ids=pmt_ids,
+    s2, s2pmt, s2si = find_peaks(ccwf, s2_indx, pmt_ids=pmt_ids,
                                  sipm_wfs      = sipm_zs_wf,
                                  thr_sipm_s2   = thr_sipm_s2,
                                  pmt_samp_wid  = pmt_samp_wid,
