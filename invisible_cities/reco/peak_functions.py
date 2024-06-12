@@ -45,57 +45,64 @@ def select_peaks(peaks, time, length, pmt_samp_wid=25*units.ns):
     return tuple(filter(is_valid, peaks))
 
 
-def pick_slice_and_rebin(indices, times, widths,
-                         wfs, rebin_stride, pad_zeros=False,
-                         sipm_pmt_bin_ratio=40):
-    slice_ = slice(indices[0], indices[-1] + 1)
-    times_  = times [   slice_]
-    widths_ = widths[   slice_]
-    wfs_    = wfs   [:, slice_]
-    if pad_zeros:
-        n_miss = indices[0] % sipm_pmt_bin_ratio
-        n_wfs  = wfs.shape[0]
-        times_  = np.concatenate([np.zeros(        n_miss) ,  times_])
-        widths_ = np.concatenate([np.zeros(        n_miss) , widths_])
-        wfs_    = np.concatenate([np.zeros((n_wfs, n_miss)),    wfs_], axis=1)
 
-    if rebin_stride < 2:
-        return times_, widths_, wfs_
+def prepend_zeros(arr, n):
+    """
+    Prepend zeros to the last axis of an array.
 
-    indices = np.arange(0, len(times_), rebin_stride)
-    (times ,
-     widths,
-     wfs   ) = rebin_times_and_waveforms(times_, widths_, wfs_, indices)
-    return times, widths, wfs
+    Parameters
+    ----------
+    arr : np.ndarray
+        Array to which prepend zeros
+
+    n : int
+        Number of zeros to prepend
+
+    Returns
+    -------
+    parr : np.ndarray
+        Array with prepended zeros.
+    """
+    n    = (*arr.shape[:-1], n)
+    axis = len(arr.shape) - 1
+    return np.concatenate([np.zeros(n), arr], axis=axis) if n else arr
 
 
-def build_pmt_responses(indices, times, widths, ccwf,
+def build_pmt_responses(indices, times, widths, ccwfs,
                         pmt_ids, rebin_stride, pad_zeros,
                         sipm_pmt_bin_ratio):
-    (pk_times ,
-     pk_widths,
-     pmt_wfs  ) = pick_slice_and_rebin(indices, times, widths,
-                                       ccwf   , rebin_stride,
-                                       pad_zeros          = pad_zeros,
-                                       sipm_pmt_bin_ratio = sipm_pmt_bin_ratio)
+    low  = indices[0]
+    high = indices[-1] + 1
+    n_mismatch = low % sipm_pmt_bin_ratio
 
-    pk_sum   = pd.DataFrame(dict( time   = pk_times
-                                , bwidth = pk_widths
-                                , ene    = pmt_wfs.sum(axis=0)))
+    times  = prepend_zeros(times [   low:high], n_mismatch)
+    widths = prepend_zeros(widths[   low:high], n_mismatch)
+    wfs    = prepend_zeros(ccwfs [:, low:high], n_mismatch)
 
-    pk_split = pd.DataFrame(dict( npmt = np.repeat(pmt_ids, pk_times.size)
-                                , ene  = pmt_wfs.flatten()))
+    if rebin_stride > 1:
+        splits  = np.arange(0, wfs.shape[1], rebin_stride)
+        weights = wfs.sum(axis=0)
+        times   = rebin_average( times, splits, weights)
+        widths  = rebin_add    (widths, splits)
+        wfs     = rebin_add    (wfs   , splits, axis=1)
+
+    pk_sum   = pd.DataFrame(dict( time   = times
+                                , bwidth = widths
+                                , ene    = wfs.sum(axis=0)))
+
+    pk_split = pd.DataFrame(dict( npmt = np.repeat(pmt_ids, times.size)
+                                , ene  = wfs.flatten()))
     return pk_sum, pk_split
 
 
-def build_sipm_responses(indices, times, widths,
-                         sipm_wfs, rebin_stride, thr_sipm_s2):
-    _, _, sipm_wfs_ = pick_slice_and_rebin(indices , times, widths,
-                                           sipm_wfs, rebin_stride,
-                                           pad_zeros = False)
-    (sipm_ids,
-     sipm_wfs)   = select_wfs_above_time_integrated_thr(sipm_wfs_,
-                                                        thr_sipm_s2)
+def build_sipm_responses(indices, sipm_wfs, rebin_stride, thr_sipm_s2):
+    wfs = sipm_wfs[:, indices[0] : indices[-1] + 1]
+
+    if rebin_stride > 1:
+        splits = np.arange(0, wfs.shape[1], rebin_stride)
+        wfs    = rebin_add(wfs, splits, axis=1)
+
+    sipm_ids, sipm_wfs = select_wfs_above_time_integrated_thr(wfs, thr_sipm_s2)
 
     sipm_ids = np.repeat(sipm_ids, sipm_wfs.shape[1])
     return pd.DataFrame(dict( nsipm = sipm_ids
@@ -117,8 +124,6 @@ def build_peak(indices, times,
                                              sipm_pmt_bin_ratio = sipm_pmt_bin_ratio)
     if with_sipms:
        sipm  = build_sipm_responses(indices // sipm_pmt_bin_ratio,
-                                    times // sipm_pmt_bin_ratio,
-                                    widths * sipm_pmt_bin_ratio,
                                     sipm_wfs,
                                     rebin_stride // sipm_pmt_bin_ratio,
                                     thr_sipm_s2)
@@ -135,11 +140,8 @@ def find_peaks(ccwfs, index,
                pmt_samp_wid = 25*units.ns,
                sipm_samp_wid = 1*units.mus,
                sipm_wfs=None, thr_sipm_s2=0):
-    ccwfs = np.array(ccwfs, ndmin=2)
-
-    peaks           = []
     times           = np.arange     (0, ccwfs.shape[1] * pmt_samp_wid, pmt_samp_wid)
-    widths          = np.full       (ccwfs.shape[1],   pmt_samp_wid)
+    widths          = np.full       (ccwfs.shape[1], pmt_samp_wid)
     indices_split   = split_in_peaks(index, stride)
     selected_splits = select_peaks  (indices_split, time, length, pmt_samp_wid)
     with_sipms      = sipm_wfs is not None
@@ -157,13 +159,14 @@ def find_peaks(ccwfs, index,
         pmt_sum  .insert(0, "peak", peak_no)
         pmt_split.insert(0, "peak", peak_no)
         sipm     .insert(0, "peak", peak_no)
+
         pmt_sums  .append(pmt_sum  )
         pmt_splits.append(pmt_split)
         sipms     .append(sipm     )
 
-    pmt_sums   = pd.concat(pmt_sums  , ignore_index=True)
-    pmt_splits = pd.concat(pmt_splits, ignore_index=True)
-    sipms      = pd.concat(sipms     , ignore_index=True)
+    pmt_sums   = pd.concat(pmt_sums  , ignore_index=True, copy=False)
+    pmt_splits = pd.concat(pmt_splits, ignore_index=True, copy=False)
+    sipms      = pd.concat(sipms     , ignore_index=True, copy=False)
     return pmt_sums, pmt_splits, sipms
 
 
@@ -184,48 +187,41 @@ def get_pmap(event, ccwf, s1_indx, s2_indx, sipm_zs_wf,
 
     return s1, s1pmt, s2, s2pmt, s2si
 
-def rebin_times_and_waveforms(times, widths, waveforms, indices):
+
+def rebin_add(*args, **kwargs):
     """
-    Groups together consecutive samples and aggregates them together
-    into a single one. Times are averaged using the waveform samples
-    as weights, while widths and waveform samples are summed up. The
-    number of consecutive slices taken is determined by `indices`,
-    which mark the start of each slice.
+    Groups together consecutive samples and adds them up into a single
+    one. It's a convenient alias to np.add.reduceat.
+    """
+    return np.add.reduceat(*args, **kwargs)
+
+
+def rebin_average(arr, indices, weights=None, **kwargs):
+    """
+    Groups together consecutive samples and averages them into a single
+    one.
 
     Parameters
     ----------
-    times : np.ndarray (n_samples,)
-        Array of buffer times
+    arr : np.ndarray (n_initial_samples,)
+        Array to rebin
 
-    widths : np.ndarray (n_samples,)
-        Array of sample widths
+    indices : np.array (n_final_samples,)
+        Array of lower bin edges. The last bin will contain the
+        aggregation of indices[-1] till the end.
 
-    waveforms : np.ndarray (n_sensors, n_samples)
-        Waveform values
+    weights : np.array (n_initial_samples,), optional
+        Weights to perform average.
 
-    rebin_stride: np.ndarray (n_new_samples,)
-        Indices that mark the lower bound of each new sample
+    **kwargs : optional arguments to np.add.reduceat
 
     Returns
     -------
-    times : np.ndarray (n_new_samples,)
-        Array of resampled buffer times
-
-    widths : np.ndarray (n_new_samples,)
-        Array of resampled sample widths
-
-    waveforms : np.ndarray (n_sensors, n_new_samples)
+    resampled : np.ndarray (n_final_samples,)
         Resampled waveform values
     """
-    # Runtime optimized
-    # - Slice loop moved to numpy via np.add.reduceat
-    # - Weighted average performed by hand inseat of using np.average,
-    #   not because it's faster per se, but because it allows us to
-    #   skip the external loop over slices
-    # - indices are now given as arguments, since they don't need to
-    #   be computed every time
-    enes      = waveforms.sum(axis=0)
-    widths    = np.add.reduceat(widths    , indices)
-    waveforms = np.add.reduceat(waveforms , indices, axis=1)
-    times     = np.add.reduceat(times*enes, indices) / waveforms.sum(axis=0)
-    return times, widths, waveforms
+    if len(arr.shape) > 1:
+        raise NotImplementedError("rebin_average is only implemented for 1D arrays")
+
+    if weights is None: return rebin_add(arr        , indices, **kwargs) / arr.size
+    else              : return rebin_add(arr*weights, indices, **kwargs) / weights.sum()
