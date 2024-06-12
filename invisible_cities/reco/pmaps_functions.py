@@ -2,12 +2,13 @@ import numpy as np
 
 from typing import List, Union
 
-from ..evm.pmaps           import                     _Peak
-from ..evm.pmaps           import              PMTResponses
-from ..evm.pmaps           import             SiPMResponses
-from . peak_functions      import rebin_times_and_waveforms
-from ..core.core_functions import        dict_filter_by_key
-from ..types.symbols       import               RebinMethod
+from ..evm.pmaps           import _Peak
+from ..evm.pmaps           import PMTResponses
+from ..evm.pmaps           import SiPMResponses
+from . peak_functions      import rebin_add
+from . peak_functions      import rebin_average
+from ..core.core_functions import dict_filter_by_key
+from ..types.symbols       import RebinMethod
 
 
 def get_even_slices(bins : int, stride : int) -> List[slice]:
@@ -71,24 +72,19 @@ def rebin_peak(peak : _Peak, rebin_factor : Union[int, float],
 
 
 def rebin_peak_to_slices(peak : _Peak, slices : List[slice]) -> _Peak:
-
-    (times,
-     widths,
-     pmt_wfs) = rebin_times_and_waveforms(peak.times,
-                                          peak.bin_widths,
-                                          peak.pmts.all_waveforms,
-                                          slices = slices)
+    splits  = np.array([sl.start for sl in slices])
+    times   = rebin_average(peak.times, splits, weights)
+    widths  = rebin_add    (peak.bin_widths, splits)
+    pmt_wfs = rebin_add    (peak.pmts.all_waveforms, splits, axis=1)
 
     pmt_r  = PMTResponses(peak.pmts.ids, pmt_wfs)
 
     sipm_r = SiPMResponses.build_empty_instance()
     if peak.sipms.ids.size:
-        *_, sipms = rebin_times_and_waveforms(peak.times,
-                                              peak.bin_widths,
-                                              peak.sipms.all_waveforms,
-                                              slices = slices)
-
+        sipms = rebin_add(peak.sipms.all_waveforms, splits, axis=1)
         sipm_r = SiPMResponses(peak.sipms.ids, sipms)
+    else:
+        sipm_r = SiPMResponses.build_empty_instance()
 
     return type(peak)(times, widths, pmt_r, sipm_r)
 
