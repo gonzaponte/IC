@@ -165,6 +165,8 @@ def detsim( *
           , buffer_params  : dict
           , physics_params : dict
           , rate           : float
+          , data_mc_ratio_pmt  : float
+          , data_mc_ratio_sipm : float
           ):
 
     buffer_params_  = buffer_params .copy()
@@ -178,8 +180,8 @@ def detsim( *
     # derived parameters
     datapmt  = db.DataPMT (detector_db, run_number)
     datasipm = db.DataSiPM(detector_db, run_number)
-    lt_pmt   = LT_PMT (fname=os.path.expandvars(s2_lighttable))
-    lt_sipm  = LT_SiPM(fname=os.path.expandvars(sipm_psf), sipm_database=datasipm)
+    lt_pmt   = LT_PMT (fname=os.path.expandvars(s2_lighttable), data_mc_ratio=data_mc_ratio_pmt)
+    lt_sipm  = LT_SiPM(fname=os.path.expandvars(sipm_psf), sipm_database=datasipm, data_mc_ratio=data_mc_ratio_sipm)
     el_gap   = lt_sipm.el_gap_width
 
     filter_delayed_hits = fl.map(filter_hits_after_max_time(buffer_params_["max_time"]),
