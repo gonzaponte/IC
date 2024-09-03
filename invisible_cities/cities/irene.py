@@ -46,6 +46,24 @@ from .  components import compute_and_write_pmaps
 from .  components import get_actual_sipm_thr
 
 
+import numpy as np
+from .. database.load_db import DataSiPM
+def sipm_reorderer(detector_db, run_number):
+    new_run_number = 14174
+    db_old = DataSiPM(detector_db,     run_number)
+    db_new = DataSiPM(detector_db, new_run_number)
+    assert len(db_old) == len(db_new)
+
+    order = []
+    for _, row in db_new.iterrows():
+        o = np.argwhere(row.ChannelID==db_old.ChannelID.values).flatten()[0]
+        order.append(o)
+
+    def reorder(wfms):
+        return wfms[order]
+    return reorder
+
+
 @city
 def irene( files_in        : OneOrManyFiles
          , file_out        : str
@@ -69,6 +87,8 @@ def irene( files_in        : OneOrManyFiles
          , thr_csum_s2     : float, thr_sipm_s2  : float
          , pmt_samp_wid    : float, sipm_samp_wid: float
          ):
+
+    reorder_sipms = fl.map(sipm_reorderer(detector_db, run_number), item="sipm")
 
     sipm_thr = get_actual_sipm_thr(thr_sipm_type, thr_sipm, detector_db, run_number)
 
@@ -124,6 +144,7 @@ def irene( files_in        : OneOrManyFiles
                                     rwf_to_cwf,
                                     cwf_to_ccwf,
                                     zero_suppress,
+                                    reorder_sipms,
                                     compute_pmaps,
                                     event_count_out.spy,
                                     fl.branch("event_number", evtnum_collect.sink),
