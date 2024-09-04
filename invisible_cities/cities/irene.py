@@ -49,7 +49,7 @@ from .  components import get_actual_sipm_thr
 import numpy as np
 from .. database.load_db import DataSiPM
 def sipm_reorderer(detector_db, run_number):
-    new_run_number = 14174
+    new_run_number = 14233
     db_old = DataSiPM(detector_db,     run_number)
     db_new = DataSiPM(detector_db, new_run_number)
     assert len(db_old) == len(db_new)
