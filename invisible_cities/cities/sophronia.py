@@ -52,6 +52,7 @@ from .. types.symbols  import RebinMethod
 from .. types.symbols  import  SiPMCharge
 from .. types.symbols  import      XYReco
 from .. types.ic_types import          NN
+from .. evm.pmaps      import        PMap
 
 from .  components import                  city
 from .  components import          copy_mc_info
@@ -70,8 +71,8 @@ from typing import Optional
 
 
 @check_annotations
-def count_valid_hits(hitc : HitCollection):
-    return sum(1 for hit in hitc.hits if hit.Q != NN)
+def count_sipms_above_threshold(pmap : PMap, thr: float):
+    return sum(s2.sipms.where_above_threshold(thr).size for s2 in pmap.s2s)
 
 
 @city
@@ -123,12 +124,12 @@ def sophronia( files_in           : OneOrManyFiles
                            , args = "pmap selector_output event_number timestamp".split()
                            , out  = "hits")
 
-    enough_valid_hits = df.map( lambda hits: count_valid_hits(hits) > 0
-                              , args = "hits"
-                              , out  = "enough_valid_hits")
+    any_sipms_above_thr = df.map( lambda pmap: count_sipms_above_threshold(pmap, q_thr) > 0
+                                , args = "pmap"
+                                , out  = "any_sipms_above_threshold")
 
-    hits_select    = df.count_filter( bool
-                                    , args = "enough_valid_hits")
+    check_sipms_above_thr = df.count_filter( bool
+                                           , args = "any_sipms_above_threshold")
 
     merge_nn_hits  = df.map( hits_merger(same_peak)
                            , item = "hits")
@@ -156,10 +157,9 @@ def sophronia( files_in           : OneOrManyFiles
         write_pmap_filter     = df.sink(  event_filter_writer(h5out, "s12_selector")
                                        , args = "event_number pmap_passed".split())
         write_hits_filter     = df.sink(  event_filter_writer(h5out, "valid_hit")
-                                       , args = "event_number enough_valid_hits".split())
+                                       , args = "event_number any_sipms_above_threshold".split())
 
-        hits_branch         = ( make_hits, enough_valid_hits, df.branch(write_hits_filter)
-                              , hits_select.filter, merge_nn_hits, correct_hits, write_hits)
+        hits_branch         = make_hits, merge_nn_hits, correct_hits, write_hits
         kdst_branch         = build_pointlike_event, write_pointlike_event
         collect_evt_numbers = "event_number", event_number_collector.sink
 
@@ -171,7 +171,10 @@ def sophronia( files_in           : OneOrManyFiles
                                          , classify_peaks
                                          , pmap_passed
                                          , df.branch(write_pmap_filter)
-                                         , pmap_select    .filter
+                                         , pmap_select         .filter
+                                         , any_sipms_above_thr
+                                         , df.branch(write_hits_filter)
+                                         , check_sipms_above_thr.filter
                                          , event_count_out.spy
                                          , df.fork( kdst_branch
                                                   , hits_branch
