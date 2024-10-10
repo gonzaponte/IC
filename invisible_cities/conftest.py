@@ -20,6 +20,7 @@ from . types.symbols     import DeconvolutionMode
 from . types.symbols     import CutType
 from . types.symbols     import SiPMCharge
 from . types.symbols     import InterpolationMethod
+from . types.symbols     import NormStrategy
 
 tbl_data = namedtuple('tbl_data', 'filename group node')
 dst_data = namedtuple('dst_data', 'file_info config read true')
@@ -814,8 +815,9 @@ def beersheba_config(Th228_hits, PSFDIR, next100_mc_krmap):
                                        , deconv_mode   = DeconvolutionMode.joint
                                        , cut_type      = CutType.abs
                                        , inter_method  = InterpolationMethod.cubic)
-                 , corrections_file = next100_mc_krmap
-                 , apply_temp       = False )
+                 , corrections   = dict( filename   = next100_mc_krmap
+                                       , apply_temp = False
+                                       , norm_strat = NormStrategy.kr))
     return config
 
 
