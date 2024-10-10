@@ -52,7 +52,6 @@ from .  components import print_every
 from .  components import hits_corrector
 from .  components import hits_thresholder
 from .  components import hits_and_kdst_from_files
-from .  components import identity
 
 from .. core.configure         import EventRangeType
 from .. core.configure         import OneOrManyFiles
@@ -79,7 +78,6 @@ from .. io.         hits_io    import hits_writer
 from .. io. event_filter_io    import event_filter_writer
 from .. io.         kdst_io    import kdst_from_df_writer
 
-from .. types.ic_types         import NoneType
 from .. types.symbols          import HitEnergy
 from .. types.symbols          import InterpolationMethod
 from .. types.symbols          import CutType
@@ -90,7 +88,6 @@ from .. core                   import system_of_units as units
 from typing import Tuple
 from typing import List
 from typing import Optional
-from typing import Union
 
 
 # Temporary. The removal of the event model will fix this.
@@ -368,18 +365,17 @@ def deconv_writer(h5out):
 
 
 @city
-def beersheba( files_in         : OneOrManyFiles
-             , file_out         : str
-             , compression      : str
-             , event_range      : EventRangeType
-             , print_mod        : int
-             , detector_db      : str
-             , run_number       : int
-             , threshold        : float
-             , same_peak        : bool
-             , deconv_params    : dict
-             , corrections_file : Union[ str, NoneType]
-             , apply_temp       : Union[bool, NoneType]
+def beersheba( files_in      : OneOrManyFiles
+             , file_out      : str
+             , compression   : str
+             , event_range   : EventRangeType
+             , print_mod     : int
+             , detector_db   : str
+             , run_number    : int
+             , threshold     : float
+             , same_peak     : bool
+             , deconv_params : dict
+             , corrections   : dict
              ):
     """
     The city corrects Penthesilea hits energy and extracts topology information.
@@ -452,13 +448,9 @@ def beersheba( files_in         : OneOrManyFiles
     DECO    : Deconvolved hits table
     MC info : (if run number <=0)
     """
-
-    if corrections_file is None: correct_hits = identity
-    else                       : correct_hits = hits_corrector(corrections_file, apply_temp)
-    correct_hits       = fl.map( correct_hits, item="hits")
-
-    threshold_hits  = fl.map(hits_thresholder(threshold, same_peak), item="hits")
-    hitc_to_df      = fl.map(hitc_to_df_, item="hits")
+    correct_hits   = fl.map(hits_corrector(**corrections), item="hits")
+    threshold_hits = fl.map(hits_thresholder(threshold, same_peak), item="hits")
+    hitc_to_df     = fl.map(hitc_to_df_, item="hits")
 
     deconv_params['psf_fname'   ] = expandvars(deconv_params['psf_fname'])
 

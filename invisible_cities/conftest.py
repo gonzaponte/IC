@@ -809,8 +809,9 @@ def beersheba_config(Th228_hits, PSFDIR, next100_mc_krmap):
                                        , deconv_mode   = ALL_SYMBOLS['joint']
                                        , cut_type      = ALL_SYMBOLS[  'abs']
                                        , inter_method  = ALL_SYMBOLS['cubic'])
-                 , corrections_file = next100_mc_krmap
-                 , apply_temp       = False )
+                 , corrections   = dict( filename   = next100_mc_krmap
+                                       , apply_temp = False
+                                       , norm_strat = ALL_SYMBOLS["kr"]))
     return config
 
 
