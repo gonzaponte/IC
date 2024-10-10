@@ -438,6 +438,16 @@ def beersheba( files_in      : OneOrManyFiles
         n_iterations_g : int
             Number of Lucy-Richardson iterations for gaussian in 'separate mode'
 
+    corrections : dict
+        filename : str
+            Path to the file holding the correction maps
+        apply_temp : bool
+            Whether to apply temporal corrections
+        norm_strat : NormStrategy
+            Normalization strategy
+        norm_value : float, optional
+            Normalization value in case of `norm_strat = NormStrategy.custom`
+
     ----------
     Input
     ----------
