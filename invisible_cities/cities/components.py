@@ -569,9 +569,9 @@ def hits_and_kdst_from_files( paths : List[str]
 
             for evtinfo in event_info:
                 event_number, timestamp = evtinfo.fetch_all_fields()
-                hits = hits_from_df(hits_df.loc[hits_df.event == event_number])
-                yield dict(hits = hits[event_number],
-                           kdst = kdst_df.loc[kdst_df.event==event_number],
+                this_event = lambda df: df.event == event_number
+                yield dict(hits = hits_df.loc[this_event],
+                           kdst = kdst_df.loc[this_event],
                            run_number = run_number,
                            event_number = event_number,
                            timestamp = timestamp)
