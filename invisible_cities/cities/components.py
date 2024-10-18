@@ -895,6 +895,11 @@ def sipm_positions(dbfile, run_number):
     return sipm_xys
 
 
+def e_from_q(qs, e_slice):
+    epsilon = np.finfo(np.float64).eps
+    return qs * e_slice / (qs.sum() + epsilon)
+
+
 def hit_builder(dbfile, run_number, drift_v,
                 rebin_slices, rebin_method,
                 global_reco, slice_reco,
@@ -952,10 +957,6 @@ def sipms_as_hits(dbfile, run_number, drift_v,
 
     sipm_xys   = sipm_positions(dbfile, run_number)
     sipm_noise = NoiseSampler(dbfile, run_number).signal_to_noise
-    epsilon    = np.finfo(np.float64).eps
-
-    def e_from_q(qs, e_slice):
-        return qs * e_slice / (qs.sum() + epsilon)
 
     def build_hits(pmap, selector_output, event_number, timestamp):
         s1_t = get_s1_time(pmap, selector_output)
