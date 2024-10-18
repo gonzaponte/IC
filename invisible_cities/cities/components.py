@@ -920,24 +920,24 @@ def hit_builder(dbfile, run_number, drift_v,
             if not passed: continue
 
             peak = pmf.rebin_peak(peak, rebin_slices, rebin_method)
-
             xys  = sipm_xys[peak.sipms.ids]
             qs   = peak.sipm_charge_array(sipm_noise, charge_type,
                                           single_point = True)
-            xy_peak = try_global_reco(global_reco, xys, qs)
 
+            xy_peak     = try_global_reco(global_reco, xys, qs)
             sipm_charge = peak.sipm_charge_array(sipm_noise        ,
                                                  charge_type       ,
                                                  single_point=False)
 
-            for slice_no, (t_slice, qs) in enumerate(zip(peak.times ,
-                                                         sipm_charge)):
-                z_slice = (t_slice - s1_t) * units.ns * drift_v
-                e_slice = peak.pmts.sum_over_sensors[slice_no]
+            slice_zs = (peak.times - s1_t) * units.ns * drift_v
+            slice_es = peak.pmts.sum_over_sensors
+            xys      = sipm_xys[peak.sipms.ids]
+
+            for (z_slice, e_slice, sipm_qs) in zip(slice_zs, slice_es, sipm_charge):
                 try:
-                    xys      = sipm_xys[peak.sipms.ids]
-                    clusters = slice_reco(xys, qs)
-                    es       = hif.split_energy(e_slice, clusters)
+                    clusters = slice_reco(xys, sipm_qs)
+                    qs       = np.array([c.Q for c in clusters])
+                    es       = e_from_q(qs, e_slice)
                     for c, e in zip(clusters, es):
                         hit  = Hit(peak_no, c, z_slice, e, xy_peak)
                         hitc.hits.append(hit)
