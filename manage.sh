@@ -2,21 +2,13 @@
 
 COMMAND=$1
 ARGUMENT=$2
-
+PYTHON_VERSION=3.13
 ## Interpret meaning of command line argument depending on which
 ## function will receive it.
 
 case $COMMAND in
     run_tests_par | compile_and_test_par)     N_PROC=${ARGUMENT:-auto} ;;
-    *)                                PYTHON_VERSION=${ARGUMENT}       ;;
 esac
-
-# If PYTHON_VERSION was not specified as an argument, deduce it from
-# the conda environment
-
-if [[ $PYTHON_VERSION = "" ]]; then
-    PYTHON_VERSION=${CONDA_DEFAULT_ENV:3:3}
-fi
 
 function install_and_check {
     install
@@ -73,7 +65,7 @@ function install_conda {
     fi
 }
 
-CONDA_ENV_TAG=2024-06-08
+CONDA_ENV_TAG=2024-11-07-0
 CONDA_ENV_NAME=IC-${PYTHON_VERSION}-${CONDA_ENV_TAG}
 
 function make_environment {
@@ -89,29 +81,29 @@ channels:
 dependencies:
 - python       = ${PYTHON_VERSION}
 # *REMEMBER TO CHANGE CONDA_ENV_TAG WHEN CHANGING VERSION NUMBERS*
-- cython       = 0.29.24
-- jupyter      = 1.0.0
-- jupyterlab   = 3.2.1
-- matplotlib   = 3.4.3
-- networkx     = 2.6.3
-- notebook     = 6.4.5
-- numpy        = 1.23.1
-- pandas       = 1.3.4
-- seaborn      = 0.11.2
-- pymysql      = 1.0.2
-- pytables     = 3.7.0
-- pytest       = 6.2.4
-- scipy        = 1.9.3
-- sphinx       = 4.2.0
-- tornado      = 6.1
-- flaky        = 3.7.0
-- hypothesis   = 6.14.1
-- pytest-xdist = 2.3.0
-- coverage     = 5.5
-- pip          = 21.2.4
-- setuptools   = 58.0.4
+- cython
+- jupyter
+- jupyterlab
+- matplotlib
+- networkx
+- notebook
+- numpy
+- pandas
+- seaborn
+- pymysql
+- pytables
+- pytest
+- scipy
+- sphinx
+- tornado
+- flaky
+- hypothesis
+- pytest-xdist
+- coverage
+- pip
+- setuptools
 - pip:
-  - pytest-instafail==0.4.2
+  - pytest-instafail
 EOF
 
     conda env create -f ${YML_FILENAME}
@@ -279,12 +271,12 @@ case $COMMAND in
        echo
        echo Usage:
        echo
-       echo "source $THIS install_and_check X.Y"
-       echo "source $THIS install X.Y"
-       echo "source $THIS work_in_python_version X.Y"
-       echo "source $THIS work_in_python_version_no_tests X.Y"
-       echo "source $THIS switch_to_conda_env X.Y"
-       echo "bash   $THIS make_environment X.Y"
+       echo "source $THIS install_and_check"
+       echo "source $THIS install"
+       echo "source $THIS work_in_python_version"
+       echo "source $THIS work_in_python_version_no_tests"
+       echo "source $THIS switch_to_conda_env"
+       echo "bash   $THIS make_environment"
        echo "bash   $THIS run_tests"
        echo "bash   $THIS run_tests_par"
        echo "bash   $THIS compile_and_test"
