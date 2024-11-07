@@ -425,7 +425,7 @@ def test_type_check_special_cases(value, type):
                    , ( 0, str)
                    , ( 0, List)
                    , ( 0, Sequence)
-#                   , ("", Tuple) # "" is equivalent to ()
+                   , ("", Tuple)
                    , ("", EventRange)))
 def test_type_check_wrong_type(value, type):
     assert not type_check(value, type)
