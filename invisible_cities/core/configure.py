@@ -131,22 +131,22 @@ def type_check(value : Any, type_expected : Any):
 
     outer          = get_origin(type_expected)
     is_subscripted = outer is not None
-    if is_subscripted:
-        # Unfortunately these two methods don't always return typing objects.
-        # That's why the if clauses below use ABC types.
+    if not is_subscripted:
+        return isinstance(value, type_expected)
 
-        inner = get_args(type_expected)
-        if not inner: # no subscript provided, check only outer type
-            return issubclass(type_got, outer)
+    # Unfortunately these two methods don't always return typing objects.
+    # That's why the if clauses below use ABC types.
 
-        if   outer is Union      : return any(type_check(value, t       ) for t    in inner)
-        elif outer is ABCSequence: return all(type_check(v    , inner[0]) for v    in value)
-        elif outer is tuple      : return all(type_check(v    , t       ) for v, t in zip(value, inner))
-        elif outer is ABCMapping : return all(type_check(k    , inner[0]) and
-                                              type_check(v    , inner[1]) for k, v in value.items())
-        else                     : return isinstance(value, outer)
+    inner = get_args(type_expected)
+    if not inner: # no subscript provided, check only outer type
+        return issubclass(type_got, outer)
 
-    return isinstance(value, type_expected)
+    if   outer is Union      : return any(type_check(value, t       ) for t    in inner)
+    elif outer is ABCSequence: return all(type_check(v    , inner[0]) for v    in value)
+    elif outer is tuple      : return all(type_check(v    , t       ) for v, t in zip(value, inner))
+    elif outer is ABCMapping : return all(type_check(k    , inner[0]) and
+                                          type_check(v    , inner[1]) for k, v in value.items())
+    else                     : return isinstance(value, outer)
 
 
 def compare_signature_to_values( function   : Callable
