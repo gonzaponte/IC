@@ -5,6 +5,8 @@ from collections import defaultdict
 from pytest import mark
 from pytest import approx
 
+from hypothesis import settings
+from hypothesis import HealthCheck
 from hypothesis import given
 from hypothesis import strategies as stg
 
@@ -202,6 +204,7 @@ def test_load_pmaps_as_df_without_ipmt(KrMC_pmaps_without_ipmt_filename, KrMC_pm
     assert read_dfs[4] is None
 
 
+@settings(suppress_health_check=(HealthCheck.too_slow,))
 @given(stg.data())
 def test_load_pmaps(output_tmpdir, data):
     pmap_filename  = os.path.join(output_tmpdir, "test_pmap_file.h5")
