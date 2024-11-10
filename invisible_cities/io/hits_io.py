@@ -50,7 +50,7 @@ def hits_from_df (dst : pd.DataFrame, skip_NN : bool = False) -> Dict[int, HitCo
                 Yrms2 = Yrms**2
             else:
                 Yrms = Yrms2 = 0
-            nsipm   = getattr(row, 'nsipm'   , -1   )     # for backwards compatibility
+            nsipm   = getattr(row, 'nsipm'   ,  0   )     # for backwards compatibility
             Qc      = getattr(row, 'Qc'      , -1   )     # for backwards compatibility
             Xpeak   = getattr(row, 'Xpeak'   , -1000)     # for backwards compatibility
             Ypeak   = getattr(row, 'Ypeak'   , -1000)     # for backwards compatibility
