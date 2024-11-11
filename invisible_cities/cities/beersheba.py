@@ -329,7 +329,7 @@ def cut_over_Q(q_cut, redist_var):
     cut = cut_and_redistribute_df(f"Q > {q_cut}", redist_var)
 
     def cut_over_Q(df):  # df shall be an event cdst
-        cdst = df.groupby(['event', 'npeak']).apply(cut).reset_index(drop=True)
+        cdst = df.groupby("event time npeak".split()).apply(cut).reset_index(drop=True)
 
         return cdst
 
@@ -352,7 +352,7 @@ def drop_isolated(distance, redist_var):
     drop = drop_isolated_sensors(distance, redist_var)
 
     def drop_isolated(df): # df shall be an event cdst
-        df = df.groupby(['event', 'npeak']).apply(drop).reset_index(drop=True)
+        df = df.groupby("event time npeak".split()).apply(drop).reset_index(drop=True)
 
         return df
 
