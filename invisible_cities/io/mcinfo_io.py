@@ -63,7 +63,8 @@ def mc_writer(h5out : tb.file.File, *, compression=None) -> Callable:
                     orig_indx = tbl.file_index.unique()
                     new_indx  = np.arange(first_indx                 ,
                                           first_indx + len(orig_indx))
-                    tbl.replace(dict(file_index=orig_indx), new_indx, inplace=True)
+                    for orig, new in zip(orig_indx, new_indx):
+                        tbl.replace(dict(file_index=orig), new, inplace=True)
                 except AttributeError:
                     tbl['file_index'] = first_indx
             col_indx = 'event' if hasattr(tbl, 'event') else None
