@@ -32,12 +32,14 @@ def test_add_variable_weighted_mean(ICDATADIR):
 def test_add_empty_sensors_and_normalize_q(ICDATADIR):
     PATH_IN        = os.path.join(ICDATADIR, "exact_Kr_tracks_with_MC.h5")
     hdst           = load_dst(PATH_IN, 'RECO', 'Events')
-    group          = hdst.groupby('event', as_index=False)
+    group          = hdst.groupby('event time npeak'.split())
     hdst_processed = group.apply(add_empty_sensors_and_normalize_q    ,
                                  var      = ['X', 'Y']                ,
                                  ranges   = [[-50, 50], [-50, 50]]    ,
-                                 database = load_db.DataSiPM('new', 0))
-    hdst_processed.reset_index(inplace=True, drop=True)
+                                 database = load_db.DataSiPM('new', 0),
+                                 include_groups=False)
+    hdst_processed.reset_index(level=3, inplace=True, drop=True )
+    hdst_processed.reset_index(         inplace=True, drop=False)
 
     assert np.allclose(hdst_processed.groupby('event').NormQ.sum().values, 1.0)
     assert np. isclose(hdst_processed.E.sum(), hdst.E.sum())
@@ -49,12 +51,14 @@ def test_add_empty_sensors_and_normalize_q_file(ICDATADIR):
     PATH_IN        = os.path.join(ICDATADIR, "exact_Kr_tracks_with_MC.h5")
     PATH_TEST      = os.path.join(ICDATADIR, "exact_Kr_tracks_with_MC_psf_empty_sensors.h5")
     hdst           = load_dst(PATH_IN, 'RECO', 'Events')
-    group          = hdst.groupby(['event'], as_index=False)
+    group          = hdst.groupby('event time npeak'.split())
     hdst_processed = group.apply(add_empty_sensors_and_normalize_q    ,
                                  var      = ['X', 'Y']                ,
                                  ranges   = [[-50, 50], [-50, 50]]    ,
-                                 database = load_db.DataSiPM('new', 0))
-    hdst_processed.reset_index(inplace=True, drop=True)
+                                 database = load_db.DataSiPM('new', 0),
+                                 include_groups=False)
+    hdst_processed.reset_index(level=3, inplace=True, drop=True )
+    hdst_processed.reset_index(         inplace=True, drop=False)
     hdst_psf       = pd.read_hdf(PATH_TEST)
     hdst_psf       = hdst_psf.astype(hdst_processed.dtypes) # since pandas update (1.0.3->1.3.4)
 
