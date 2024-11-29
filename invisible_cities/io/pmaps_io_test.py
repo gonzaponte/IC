@@ -4,9 +4,7 @@ from collections import defaultdict
 
 from pytest import mark
 from pytest import approx
-
-from hypothesis import given
-from hypothesis import strategies as stg
+from pytest import fixture
 
 import tables as tb
 import numpy  as np
@@ -17,8 +15,9 @@ from ..core.testing_utils import assert_dataframes_equal
 from ..core.testing_utils import exactly
 from ..evm .pmaps         import S1
 from ..evm .pmaps         import S2
+from ..evm .pmaps         import PMTResponses
+from ..evm .pmaps         import SiPMResponses
 from ..evm .pmaps         import PMap
-from ..evm .pmaps_test    import pmaps    as pmap_gen
 from .                    import pmaps_io as pmpio
 from .                    import run_and_event_io as reio
 
@@ -31,6 +30,47 @@ pmaps_data = namedtuple("pmaps_data", """evt_numbers      peak_numbers
                                          evt_numbers_sipm peak_numbers_sipm
                                          times npmts nsipms
                                          enes enes_pmt enes_sipm""")
+
+@fixture(scope="session")
+def two_pmaps_evm():
+    """
+    Generate two pmaps (two events) with random data. We fix the RNG
+    state for reproducibility. We make minimal changes to the sensor
+    ID and wfs between pmts and sipms to keep this fixture to a
+    minimum since the data values are irrelevant. We use different
+    number of S1s and S2s to cover more cases.
+    """
+    state = np.random.get_state()
+    np.random.seed(123456789)
+
+    pmaps = {}
+    for i in range(2):
+        n_sensors = 5
+        n_samples = 50
+        n_s1      = 1 + i
+        n_s2      = 2 - i
+
+        peaks = []
+        for with_sipms in [False]*n_s1 + [True]*n_s2:
+            times   = np.arange     (n_samples)
+            bwidths = np.ones       (n_samples)
+            ids     = np.arange     (n_sensors) * 3
+            wfs     = np.random.rand(n_sensors, n_samples)
+            pmts    =  PMTResponses(ids     , wfs  )
+            if with_sipms:
+                sipms = SiPMResponses(ids+1000, wfs*2)
+                peak  = S2
+            else:
+                sipms = SiPMResponses.build_empty_instance()
+                peak  = S1
+            peaks.append(peak(times, bwidths, pmts, sipms))
+
+        s1s, s2s = peaks[:n_s1], peaks[n_s1:]
+        pmaps[i*5] = PMap(s1s, s2s)
+
+    np.random.set_state(state)
+    return pmaps
+
 
 def pmaps_to_arrays(pmaps, evt_numbers, attr):
     data = defaultdict(list)
@@ -232,28 +272,13 @@ def test_load_pmaps_as_df_eager_without_ipmt(KrMC_pmaps_without_ipmt_filename, K
     assert read_dfs[4] is None
 
 
-@given(stg.data())
-def test_load_pmaps_eager(output_tmpdir, data):
-    pmap_filename  = os.path.join(output_tmpdir, "test_pmap_file.h5")
-    event_numbers  = [2, 4, 6]
-    pmt_ids        = [1, 6, 8]
-    pmap_generator = pmap_gen(pmt_ids)
-    true_pmaps     = [data.draw(pmap_generator)[1] for _ in event_numbers]
-
-    with tb.open_file(pmap_filename, "w") as output_file:
-        write = pmpio.pmap_writer(output_file)
-        list(map(write, true_pmaps, event_numbers))
-
-        write = reio.run_and_event_writer(output_file)
-        for event_number in event_numbers:
-            write(0, event_number, 0)
-
-    read_pmaps = pmpio.load_pmaps_eager(pmap_filename)
-
-    assert len(read_pmaps) == len(true_pmaps)
-    assert np.all(list(read_pmaps.keys()) == event_numbers)
-    for true_pmap, read_pmap in zip(true_pmaps, read_pmaps.values()):
-        assert_PMap_equality(read_pmap, true_pmap)
+def test_load_pmaps_eager(two_pmaps, output_tmpdir):
+    filename, true_pmaps, _ = two_pmaps
+    read_pmaps = pmpio.load_pmaps_eager(filename)
+    assert    len(read_pmaps) ==    len(true_pmaps)
+    assert sorted(read_pmaps) == sorted(true_pmaps) # compare keys
+    for key, true_pmap in true_pmaps.items():
+        assert_PMap_equality(read_pmaps[key], true_pmap)
 
 
 def test_load_pmaps_lazy(KrMC_pmaps_filename):
