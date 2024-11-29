@@ -72,6 +72,58 @@ def two_pmaps_evm():
     return pmaps
 
 
+@fixture(scope="session")
+def two_pmaps_dfs(two_pmaps_evm):
+    """Same as `two_pmaps` but with DataFrames"""
+    s1_data = pmaps_to_arrays(two_pmaps_evm, list(two_pmaps_evm), "s1s")
+    s2_data = pmaps_to_arrays(two_pmaps_evm, list(two_pmaps_evm), "s2s")
+
+    s1 = pd.DataFrame(dict( event  = s1_data.evt_numbers
+                          , time   = s1_data.times
+                          , peak   = s1_data.peak_numbers
+                          , bwidth = s1_data.bwidths
+                          , ene    = s1_data.enes
+                          ))
+    s2 = pd.DataFrame(dict( event  = s2_data.evt_numbers
+                          , time   = s2_data.times
+                          , peak   = s2_data.peak_numbers
+                          , bwidth = s2_data.bwidths
+                          , ene    = s2_data.enes
+                          ))
+    si = pd.DataFrame(dict( event  = s2_data.evt_numbers_sipm
+                          , peak   = s2_data.peak_numbers_sipm
+                          , nsipm  = s2_data.nsipms
+                          , ene    = s2_data.enes_sipm
+                          ))
+    s2pmt = pd.DataFrame(dict( event  = s2_data.evt_numbers_pmt
+                             , peak   = s2_data.peak_numbers_pmt
+                             , nsipm  = s2_data.npmts
+                             , ene    = s2_data.enes_pmt
+                             ))
+    s1pmt = pd.DataFrame(dict( event  = s1_data.evt_numbers_pmt
+                             , peak   = s1_data.peak_numbers_pmt
+                             , nsipm  = s1_data.npmts
+                             , ene    = s1_data.enes_pmt
+                             ))
+    return s1, s2, si, s1pmt, s2pmt
+
+
+@fixture(scope="session")
+def two_pmaps(two_pmaps_evm, two_pmaps_dfs, output_tmpdir):
+    pmap_filename = os.path.join(output_tmpdir, "two_pmaps.h5")
+    run_number    = 0 # irrelevant
+    timestamp     = 0 # irrelevant
+
+    with tb.open_file(pmap_filename, "w") as output_file:
+        write_pmap    = pmpio.pmap_writer(output_file)
+        write_evtinfo = reio.run_and_event_writer(output_file)
+        for event_number, pmap in two_pmaps_evm.items():
+            write_pmap   (pmap, event_number)
+            write_evtinfo(run_number, event_number, timestamp)
+
+    return pmap_filename, two_pmaps_evm, two_pmaps_dfs
+
+
 def pmaps_to_arrays(pmaps, evt_numbers, attr):
     data = defaultdict(list)
     for evt_number, pmap in zip(evt_numbers, pmaps.values()):
