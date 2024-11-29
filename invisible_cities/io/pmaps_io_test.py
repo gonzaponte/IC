@@ -28,7 +28,7 @@ from typing import Mapping
 pmaps_data = namedtuple("pmaps_data", """evt_numbers      peak_numbers
                                          evt_numbers_pmt  peak_numbers_pmt
                                          evt_numbers_sipm peak_numbers_sipm
-                                         times npmts nsipms
+                                         times bwidths npmts nsipms
                                          enes enes_pmt enes_sipm""")
 
 @fixture(scope="session")
@@ -87,6 +87,7 @@ def pmaps_to_arrays(pmaps, evt_numbers, attr):
             data["evt_numbers_sipm"] .extend([ evt_number] * size * nsipm)
             data["peak_numbers_sipm"].extend([peak_number] * size * nsipm)
             data["times"]            .extend(peak.times)
+            data["bwidths"]          .extend(peak.bin_widths)
             data["npmts"]            .extend(np.repeat(peak. pmts.ids, size))
             data["nsipms"]           .extend(np.repeat(peak.sipms.ids, size))
             data["enes"]             .extend(peak.pmts.sum_over_sensors)
