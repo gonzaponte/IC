@@ -52,10 +52,10 @@ def two_pmaps_evm():
 
         peaks = []
         for with_sipms in [False]*n_s1 + [True]*n_s2:
-            times   = np.arange     (n_samples)
-            bwidths = np.ones       (n_samples)
+            times   = np.arange     (n_samples, dtype=np.float32)
+            bwidths = np.ones       (n_samples, dtype=np.float32)
             ids     = np.arange     (n_sensors) * 3
-            wfs     = np.random.rand(n_sensors, n_samples)
+            wfs     = np.random.rand(n_sensors, n_samples).astype(np.float32)
             pmts    =  PMTResponses(ids     , wfs  )
             if with_sipms:
                 sipms = SiPMResponses(ids+1000, wfs*2)
@@ -80,30 +80,30 @@ def two_pmaps_dfs(two_pmaps_evm):
 
     s1 = pd.DataFrame(dict( event  = s1_data.evt_numbers
                           , time   = s1_data.times
-                          , peak   = s1_data.peak_numbers
+                          , peak   = s1_data.peak_numbers.astype(np.uint8)
                           , bwidth = s1_data.bwidths
                           , ene    = s1_data.enes
                           ))
     s2 = pd.DataFrame(dict( event  = s2_data.evt_numbers
                           , time   = s2_data.times
-                          , peak   = s2_data.peak_numbers
+                          , peak   = s2_data.peak_numbers.astype(np.uint8)
                           , bwidth = s2_data.bwidths
                           , ene    = s2_data.enes
                           ))
     si = pd.DataFrame(dict( event  = s2_data.evt_numbers_sipm
-                          , peak   = s2_data.peak_numbers_sipm
-                          , nsipm  = s2_data.nsipms
+                          , peak   = s2_data.peak_numbers_sipm.astype(np.uint8)
+                          , nsipm  = s2_data.nsipms.astype(np.int16)
                           , ene    = s2_data.enes_sipm
                           ))
-    s2pmt = pd.DataFrame(dict( event  = s2_data.evt_numbers_pmt
-                             , peak   = s2_data.peak_numbers_pmt
-                             , nsipm  = s2_data.npmts
-                             , ene    = s2_data.enes_pmt
+    s2pmt = pd.DataFrame(dict( event = s2_data.evt_numbers_pmt
+                             , peak  = s2_data.peak_numbers_pmt.astype(np.uint8)
+                             , npmt  = s2_data.npmts.astype(np.uint8)
+                             , ene   = s2_data.enes_pmt
                              ))
-    s1pmt = pd.DataFrame(dict( event  = s1_data.evt_numbers_pmt
-                             , peak   = s1_data.peak_numbers_pmt
-                             , nsipm  = s1_data.npmts
-                             , ene    = s1_data.enes_pmt
+    s1pmt = pd.DataFrame(dict( event = s1_data.evt_numbers_pmt
+                             , peak  = s1_data.peak_numbers_pmt.astype(np.uint8)
+                             , npmt  = s1_data.npmts.astype(np.uint8)
+                             , ene   = s1_data.enes_pmt
                              ))
     return s1, s2, si, s1pmt, s2pmt
 
@@ -279,9 +279,9 @@ def test_store_pmap(output_tmpdir, KrMC_pmaps_dict):
         assert cols.ene  [:] == approx (s2_data.enes_sipm)
 
 
-def test_load_pmaps_as_df_eager(KrMC_pmaps_filename, KrMC_pmaps_dfs):
-    true_dfs = KrMC_pmaps_dfs
-    read_dfs = pmpio.load_pmaps_as_df_eager(KrMC_pmaps_filename)
+def test_load_pmaps_as_df_eager(two_pmaps):
+    filename, _, true_dfs = two_pmaps
+    read_dfs = pmpio.load_pmaps_as_df_eager(filename)
     for read_df, true_df in zip(read_dfs, true_dfs):
         assert_dataframes_equal(read_df, true_df)
 
