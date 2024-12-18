@@ -23,6 +23,11 @@ version_pattern = "^ (\d+) (\.) (\d+) (\.) (\d+) $".replace(" ", "")
 if not re.match(version, version_pattern):
     version = "0.0.0"
 
+
+print("VERSION--"*100)
+print(version)
+print("VERSION--"*100)
+
 files      = "invisible_cities/*/*.pyx"
 directives = dict(language_level=3, embedsignature=True)
 
