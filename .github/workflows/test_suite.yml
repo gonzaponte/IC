@@ -26,6 +26,7 @@ jobs:
     - name: Install IC
       run: |
         source $CONDA/etc/profile.d/conda.sh
+        cat -n /usr/share/miniconda/lib/python3.12/argparse.py | tail -n 1950 | head -100
         source manage.sh activate_no_tests
 
 
