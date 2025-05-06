@@ -1553,9 +1553,9 @@ def hits_corrector( filename   : str
 
     def correct(hitc : HitCollection) -> HitCollection:
         for hit in hitc.hits:
-            corr    = get_coef([hit.X], [hit.Y], [hit.Z], hitc.time)[0]
+            corr    = get_coef([hit.X], [hit.Y], [hit.DT], hitc.time)[0]
             hit.Ec  = hit.E * corr
-            hit.xyz = (hit.X, hit.Y, time_to_Z(hit.Z)) # ugly, but temporary
+            hit.xyz = (hit.X, hit.Y, time_to_Z(hit.DT)) # ugly, but temporary
         return hitc
 
     return correct
