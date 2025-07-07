@@ -75,15 +75,26 @@ def build_pmt_responses(indices, times, widths, ccwf,
     return pk_times, pk_widths, PMTResponses(pmt_ids, pmt_wfs)
 
 
+import pandas as pd
+noise_    = pd.read_hdf("/media/gonzalo/se/data/NEXT/next100/15539-kr-nozs/selected/sipm_noise.h5")
+noise_ave = noise_.noise_mean.values[:, np.newaxis]
+noise_std = noise_.noise_std .values
+
 def build_sipm_responses(indices, times, widths,
                          sipm_wfs, sipm_ids, rebin_stride, thr_sipm_s2):
-    _, _, sipm_wfs_ = pick_slice_and_rebin(indices , times, widths,
-                                           sipm_wfs, rebin_stride,
-                                           pad_zeros = False)
-    (sipm_idx,
-     sipm_wfs)   = select_wfs_above_time_integrated_thr(sipm_wfs_,
-                                                        thr_sipm_s2)
-    return SiPMResponses(sipm_ids[sipm_idx], sipm_wfs)
+    _, _, sipm_wfs = pick_slice_and_rebin(indices , times, widths,
+                                          sipm_wfs, rebin_stride,
+                                          pad_zeros = False)
+
+    noise_suppression = 3
+    sipm_wfs = sipm_wfs - noise_ave
+    thr      = noise_std * sipm_wfs.shape[1]**0.5 * noise_suppression
+
+    sel      = sipm_wfs.sum(axis=1) > thr
+    sipm_ids = sipm_ids[sel]
+    sipm_wfs = sipm_wfs[sel]
+    sipm_wfs = np.where(sipm_wfs>0, sipm_wfs, 0)
+    return SiPMResponses(sipm_ids, sipm_wfs)
 
 
 def build_peak(indices, times,
