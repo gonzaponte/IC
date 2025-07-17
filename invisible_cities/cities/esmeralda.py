@@ -56,6 +56,8 @@ from .. io.         hits_io import hits_writer
 from .. io.         kdst_io import kdst_from_df_writer
 from .. io.run_and_event_io import run_and_event_writer
 
+from typing import Optional
+
 
 def hit_dropper(radius : float):
     def in_fiducial(hit : evm.Hit) -> bool:
