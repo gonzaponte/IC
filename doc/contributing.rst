@@ -313,7 +313,7 @@ whose working directory is inside there relevant git repository.
 7. Fetch the latest developments on ``upstream/master``. (You already
    did this in step 1.)
 
-   - magit: 
+   - magit:
 
       - ``f e upstream RET``
 
@@ -333,7 +333,7 @@ whose working directory is inside there relevant git repository.
    repository conflict with your work. If this happens, abort the
    rebase
 
-   - magit: ``r a y`` ([r]ebase [a]bort [y]es)  
+   - magit: ``r a y`` ([r]ebase [a]bort [y]es)
 
    and proceed with the PR without rebasing. These conflicts will need
    to be resolved and your commits will have to rebased eventually,
@@ -448,7 +448,88 @@ mind if the code is broken by someone else!**
 Style guide
 -----------
 
-Follow PEP8, but bear in mind that the most important part of PEP8 is:
+Check out our `style guide <./style.rst>`_.
 
-TODO copypasta n link to the "Readability is more important than any
-of these rules"
+
+Code reviews
+============
+
+If you are asked to review a pull request (PR), be nice and find some
+time to do it. These are some guidelines on how to review a pull
+request for IC. This is not an exhaustive list, but rather some main
+points to look for. The variety and amount of things to look for
+depends a lot on the extent and nature of the PR. Try to find a good
+balance between being thorough and linient.
+
+1. The PR description should give enough context and detail for anyone
+   reading it to understand why the PR was opened. It should also
+   detail its scope. Remember that the PR description is included in
+   the merge commit message, the more clear it is, the easier it will
+   be to follow the progress of the repository later on. Whenever
+   appropriate, the description should provide a short list of the
+   main changes. Here is an example:
+
+   - Added and tested a function to do X
+
+   - Refactor the code in this place to avoid duplicities
+
+   - Added the option to use this function in this place
+
+   Ask for a better description if you find it unsatisfactory.
+
+2. If a PR closes an open issue in the repository, it should say so
+   explicitly and handle the automatic closure of the issue using
+   `github's linking keywords <https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue>`_.
+
+3. The commit history should be reasoably atomic and well-written (as
+   described above). It will make your job easier. You can ask for it
+   to be rewritten more clearly if it is too cumbersome.
+   If done properly, the commit history will already give you an
+   overview of the changes that you are about to review.
+
+4. Follow the author's logic; if you can't, ask for clarification.
+   If it is satisfactory, it probably belongs into a comment or a
+   docstring; if not, the code probably needs to be changed.
+
+5. Do not be shy or afraid to ask 'silly' questions or worry about
+   seeming like you don't know how to code; this is a collaborative
+   effort, and every question or comment helps us clarify ideas,
+   uncover assumptions, and ultimately write better, more maintainable
+   code. It is your job as a reviewer to understand the code and, if
+   possible, the implications of the changes you are reviewing.
+
+6. Make sure every new function is tested to some extent. The amount
+   of testing for any given function depends on many factors, but
+   consider this:
+
+   - For "low level" functions (i.e. those that can be described as
+     "doing one thing"):
+
+     - Make sure that the simplest possible test exists. That is, a
+       test where the arguments lead to an predictable output without
+       thinking too hard. This test might be parametrized if multiple
+       simple cases are somehow representative.
+
+     - Try to find edge cases where the tested function might have
+       a specific behaviour (e.g. division by zero, empty containers,
+       etc.), ensure these cases are also tested.
+
+     - Make sure that, if the function raises exceptions, the
+       scenarios that produce them are tested as well.
+
+     - The tests should be focused on one or very few aspects of the
+       tested function. Ask the author to split up tests that are too
+       crompehensive into smaller ones.
+   - For "high level" functions (i.e. those that perform a bigger task
+     combining multiple "lower level" functions) make fewer tests.
+     Rely on the exhaustive testing of the lower level functions, but
+     try to cover as many corners as possible.
+
+7. Tests must be readable, if you cannot understand the test, you will
+   hardly be able to assess if it makes sense. As for any other piece
+   of code, readability is paramount.
+
+8. Use tools like `coverage` to assess if there are parts of the new
+   code that are not tested. Please take this metric as an indication
+   for where the test suite can be improved, not as a requisite for
+   the PR to be approved.
