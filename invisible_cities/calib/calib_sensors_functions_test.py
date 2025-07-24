@@ -119,24 +119,28 @@ def square_pmt_and_sipm_waveforms():
     return pedestal, nsensors, pmts_fee, pmts_blr, pmts_BLR, sipms_wfm, sipms_noped
 
 
-@flaky(max_runs=2)
-def test_subtract_baseline_mode_yield_compatible_result_for_gaussian_signal(gaussian_sipm_signal):
-    signal, _ = gaussian_sipm_signal
-    n_1sigma = []
+@fixture
+def square_wave():
+    # setup: no baseline, 10 samples deviate by 5 units, half in each direction.
+    # cancelling out mean, median and mode
+    wave           = np.zeros((1, 100), dtype=int)
+    wave[:, 40:50] =  5
+    wave[:, 50:60] = -5
+    return wave
+
+
+def test_subtract_baseline_mode_does_not_distort_signal(square_wave):
+    signal = square_wave * 12 + 34
     for bls_mode in BlsMode:
-        bls   = csf.subtract_baseline(signal, bls_mode=bls_mode)
-        n_1sigma.append(np.count_nonzero(cf.in_range(bls, -3, 3)))
-
-    assert all_elements_close(n_1sigma, t_rel=1e-2)
+        bls = csf.subtract_baseline(signal, bls_mode=bls_mode)
+        assert np.allclose(bls/12, square_wave)
 
 
-@flaky(max_runs=2)
 @mark.parametrize("bls_mode", BlsMode)
-def test_subtract_baseline_valid_options_sanity_check(gaussian_sipm_signal, bls_mode):
-    signal, _ = gaussian_sipm_signal
-    bls       = csf.subtract_baseline(signal, bls_mode=bls_mode)
-    n_1sigma  = np.count_nonzero(cf.in_range(bls, -3, 3))
-    assert n_1sigma > 0.99 * signal.size
+def test_subtract_baseline_valid_options_sanity_check(square_wave, bls_mode):
+    signal = square_wave + 12
+    bls    = csf.subtract_baseline(signal, bls_mode=bls_mode)
+    assert np.allclose(bls, square_wave)
 
 
 @mark.parametrize("wrong_bls_mode",
@@ -167,33 +171,63 @@ def test_calibrate_wfs_with_zeros(gaussian_sipm_signal_wo_baseline):
     assert calibrated[dead_index] == approx(np.zeros(signal_pes.shape[1]))
 
 
-@flaky(max_runs=2)
-@mark.parametrize("nsigma fraction".split(),
-                  ((1, 0.68),
-                   (2, 0.95),
-                   (3, 0.97)))
-def test_calibrate_pmts_stat(oscillating_waveform_wo_baseline,
-                             nsigma, fraction):
-    (wfs, adc_to_pes,
-     n_samples, noise_sigma) = oscillating_waveform_wo_baseline
-    n_maw                    = n_samples // 500
+def test_calibrate_pmts_consistent_shapes(oscillating_waveform_wo_baseline):
+    wfs, adc_to_pes, *_ = oscillating_waveform_wo_baseline
+    ccwfs, ccwfs_maw, cwf_sum, cwf_sum_maw = csf.calibrate_pmts( wfs, adc_to_pes
+                                                               , n_maw   = 100
+                                                               , thr_maw =   0)
 
-    (ccwfs  , ccwfs_maw  ,
-     cwf_sum, cwf_sum_maw) = csf.calibrate_pmts(wfs, adc_to_pes,
-                                                n_maw, nsigma * noise_sigma)
+    assert ccwfs   .shape == ccwfs_maw  .shape == wfs.shape
+    assert cwf_sum .shape == cwf_sum_maw.shape
+    assert ccwfs[0].size  == cwf_sum    .size
 
-    # Because there is only one waveform, the sum and the
-    # waveform itself must be the same.
-    assert ccwfs    .size == cwf_sum    .size
-    assert ccwfs_maw.size == cwf_sum_maw.size
 
-    assert ccwfs    [0] == approx(cwf_sum)
-    assert ccwfs_maw[0] == approx(cwf_sum_maw)
+def test_calibrate_pmts_consistent_sum(oscillating_waveform_wo_baseline):
+    wfs0, adc_to_pes, _, noise = oscillating_waveform_wo_baseline
+    wfs3 = np.concatenate([wfs0] * 3, axis=0)
 
-    assert wfs[0] / adc_to_pes[0] == approx(cwf_sum)
+    *_, cwf_sum0, cwf_sum_maw0 = csf.calibrate_pmts( wfs0, adc_to_pes
+                                                   , n_maw   = 100
+                                                   , thr_maw = noise * 2)
+    *_, cwf_sum3, cwf_sum_maw3 = csf.calibrate_pmts( wfs3, adc_to_pes
+                                                   , n_maw   = 100
+                                                   , thr_maw = noise * 2)
 
-    number_of_zeros = np.count_nonzero(cwf_sum_maw == 0)
-    assert number_of_zeros > fraction * cwf_sum_maw.size
+    assert np.allclose(cwf_sum0     * 3, cwf_sum3    )
+    assert np.allclose(cwf_sum_maw0 * 3, cwf_sum_maw3)
+
+
+def test_calibrate_pmts_scaled_correctly(oscillating_waveform_wo_baseline):
+    wfs, *_ = oscillating_waveform_wo_baseline
+    factors = np.arange(1, 5)
+    wfs0    = wfs
+    wfs     = np.concatenate([wfs0 * i for i in factors], axis=0)
+
+    ccwfs, *_ = csf.calibrate_pmts( wfs, factors
+                                  , n_maw = 100
+                                  , thr_maw = 0)
+
+    for i, f in enumerate(factors):
+        assert np.allclose(ccwfs[i], wfs0)
+
+
+def test_calibrate_pmts_maw(square_wave):
+    # a square waveform will only deviate from the baseline at two points,
+    # however we only consider positive deviations, therefore only the first one
+    # contributes to the search.
+    # The size of the maw controls for how long the average deviates from zero
+    # (n_maw - 1 samples) and by how much (linear trend between 0 and 1 with n-1
+    # steps)
+    wf           = np.zeros((1, 100))
+    wf[:, 45:55] = 1.
+    _, ccwfs_maw, *_  = csf.calibrate_pmts( wf
+                                          , adc_to_pes = np.ones(1)
+                                          , n_maw      = 11
+                                          , thr_maw    = 0.05)
+
+    assert all(ccwfs_maw[0,   :45] == 0)
+    assert all(ccwfs_maw[0, 45:55] == 1)
+    assert all(ccwfs_maw[0, 55:  ] == 0)
 
 
 @mark.parametrize("nsigma fraction".split(),
