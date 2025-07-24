@@ -166,12 +166,6 @@ def test_gauss_symmetry(data):
                     fitf.gauss(-data, 1., 0., 1.))
 
 
-#def test_gauss_breaks_when_sigma_is_negative():
-#    assert_raises(ValueError,
-#                  fitf.get_from_name,
-#                  funname)
-
-
 @given(integers(min_value = -100,
                 max_value = +100),
        integers(min_value = -100,
