@@ -2,7 +2,6 @@ import numpy as np
 
 from pytest                       import mark
 from pytest                       import raises
-from flaky                        import flaky
 from hypothesis                   import given
 from hypothesis.strategies        import floats
 from hypothesis.     extra.pandas import data_frames
@@ -12,23 +11,39 @@ from . testing_utils              import all_elements_close
 from . testing_utils              import assert_tables_equality
 
 
-@flaky(max_runs=2)
-@mark.parametrize("  mu  sigma  t_rel  t_abs".split(),
-                  (( 10,  5e-3,  1e-1,  1e-6),
-                   (  0,  5e-4,  1e-1,  1e-2)))
-def test_all_elements_close_simple(mu, sigma, t_rel, t_abs):
-    x = np.random.normal(mu, sigma, 10)
-    assert all_elements_close(x, t_rel=t_rel, t_abs=t_abs)
+@mark.parametrize("  mu  t_rel".split(),
+                  ((   123,  1e-1),
+                   ( 45678,  1e-3)))
+def test_all_elements_close_rel(mu, t_rel):
+    eps = np.finfo(np.float32).eps
+    x   = np.linspace( mu - t_rel*mu + eps
+                     , mu + t_rel*mu - eps
+                       , 101)
+    x = np.roll(x, -50) # put mu at index 0
+    assert all_elements_close(x, t_rel=t_rel, t_abs=0)
 
 
-@flaky(max_runs=2)
-@given(floats  (min_value = -100,
-                max_value = +100),
-       floats  (min_value =    1,
-                max_value =  +10))
-def test_all_elements_close_par(mu, sigma):
-    x = np.random.normal(mu, sigma, 10)
-    assert all_elements_close(x, t_rel=5 * sigma, t_abs=5 * sigma)
+@mark.parametrize("   mu  t_abs".split(),
+                  ((   0,  1e-6),
+                   ( 123,  1e-1)))
+def test_all_elements_close_abs(mu, t_abs):
+    eps = np.finfo(np.float32).eps
+    x   = np.linspace( mu - t_abs + eps
+                     , mu + t_abs - eps
+                     , 101)
+    x = np.roll(x, -50) # put mu at index 0
+
+    assert all_elements_close(x, t_rel=0, t_abs=t_abs)
+
+
+@mark.parametrize("opts", (dict(t_rel=0.1), dict(t_abs=1.234)))
+def test_all_elements_close_par(opts):
+    n  = 100
+    t  = np.linspace(0, 2*np.pi, n) # parametric variable
+    x  = np.ones(n) * 12.34
+    x += np.sin (t) * 1.234 # variations are up to 10% of baseline value
+    assert all_elements_close(x, **opts)
+
 
 @given(data_frames([column('A', dtype=int  ),
                     column('B', dtype=float),
@@ -37,6 +52,7 @@ def test_all_elements_close_par(mu, sigma):
 def test_assert_tables_equality(df):
     table = df.to_records(index=False)
     assert_tables_equality(table, table)
+
 
 def test_assert_tables_equality_withNaN():
     table = np.array([('Rex', 9, 81.0), ('Fido', 3, np.nan)],
