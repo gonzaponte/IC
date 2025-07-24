@@ -7,7 +7,6 @@ from pytest import fixture
 from pytest import approx
 from pytest import mark
 from pytest import raises
-from flaky  import flaky
 
 from .. core.testing_utils import all_elements_close
 
@@ -278,7 +277,6 @@ def test_wf_baseline_subtracted_is_close_to_zero(gaussian_sipm_signal):
     np.testing.assert_allclose(np.mean(bls_wf, axis=1), 0, atol=1e-10)
 
 
-@flaky(max_runs=10, min_passes=10)
 def test_subtract_mean_diff_minmax_remains_constant(square_pmt_and_sipm_waveforms):
     _, _, pmts_fee, _, _, _, _ = square_pmt_and_sipm_waveforms
     pmts_bls = csf.subtract_mean(pmts_fee)
@@ -290,7 +288,6 @@ def test_subtract_mean_diff_minmax_remains_constant(square_pmt_and_sipm_waveform
     assert np.allclose(wf_diff_bls, wf_diff_original)
 
 
-@flaky(max_runs=10, min_passes=10)
 def test_subtract_mean_mean_is_zero(square_pmt_and_sipm_waveforms):
     _, _, pmts_fee, _, _, _, _ = square_pmt_and_sipm_waveforms
     pmts_bls = csf.subtract_mean(pmts_fee)
@@ -301,7 +298,6 @@ def test_subtract_mean_mean_is_zero(square_pmt_and_sipm_waveforms):
     assert np.allclose(wf_mean_bls, 0, atol=1e-10)
 
 
-@flaky(max_runs=10, min_passes=10)
 def test_subtract_mean_difference_is_mean(square_pmt_and_sipm_waveforms):
     _, _, pmts_fee, _, _, _, _ = square_pmt_and_sipm_waveforms
     pmts_bls = csf.subtract_mean(pmts_fee)
@@ -315,7 +311,6 @@ def test_subtract_mean_difference_is_mean(square_pmt_and_sipm_waveforms):
         assert np.allclose(diff, mean)
 
 
-@flaky(max_runs=10, min_passes=10)
 def test_mean_for_pmts_fee_is_unbiased(square_pmt_and_sipm_waveforms):
     _, _, pmts_fee, _, _, _, _ = square_pmt_and_sipm_waveforms
     pmts_bls = csf.subtract_mean(pmts_fee) # ped subtracted near zero
