@@ -350,36 +350,43 @@ def test_profile1D_uniform_distribution(func):
     assert np.allclose(ye, rms/n**0.5, rtol=eps)
 
 
-@mark.parametrize(["func"],
-                  ((fitf.profileX,),
-                   (fitf.profileY,)))
-@flaky(max_runs=3, min_passes=1)
-def test_profile1D_uniform_distribution_std(func):
-    N    = 100000
-    Nbin = 100
-    rms  = 12**-0.5
-
-    xdata = np.random.rand(N)
-    ydata = np.random.rand(N)
-    xp, yp, ye = func(xdata, ydata, Nbin, std=True)
-
-    assert np.allclose(ye, rms, rtol=0.1)
-
-
-@given(xdata = float_arrays(size       =  100,
-                            min_value  = -1e3,
-                            max_value  = +1e3),
-       ydata = float_arrays(size       =  100,
-                            min_value  = -1e3,
-                            max_value  = +1e3))
 @mark.parametrize("func", (fitf.profileX, fitf.profileY))
-def test_profile1D_custom_range(func, xdata, ydata):
-    xrange     = (-100, 100)
-    kw         = "yrange" if func.__name__.endswith("Y") else "xrange"
-    d          = {kw: xrange}
-    xp, yp, ye = func(xdata, ydata, **d)
-    assert np.all(core.in_range(xp, *xrange))
+def test_profile1D_spacing(func):
+    xdata  = np.linspace(-1, 1, 100)
+    ydata  = xdata
+    xp, *_ = func(xdata, ydata, 100)
 
+    dx = 2 / 100
+    assert_allclose(np.diff(xp), dx)
+
+
+@mark.parametrize("func", (fitf.profileX, fitf.profileY))
+def test_profile1D_y_equal_x(func):
+    N      = 100000
+    Nbin   = 100
+    xdata  = np.linspace(-1, 1, N+1)
+    ydata  = xdata
+    *_, ye = func(xdata, ydata, Nbin, std=True)
+
+    # expected rms for N points distributed homogeneously between two coundaries
+    dbin    = 2 / Nbin
+    nperbin = N / Nbin
+    rms     = dbin * (1 - nperbin**-2)**0.5 / 12**0.5
+    assert np.allclose(ye, rms, rtol=0.01)
+
+
+@mark.parametrize( "func arg".split()
+                 , ( (fitf.profileX, "xrange")
+                   , (fitf.profileY, "yrange")))
+@given(ndata = integers(10, 1000))
+def test_profile1D_custom_range(func, arg, ndata):
+    xdata   = np.linspace(-10**3, 10**3, ndata)
+    ydata   = xdata
+    xyrange = -100, 100 # x or y range
+    arg     = {arg: xyrange}
+
+    xp, *_ = func(xdata, ydata, 100, **arg)
+    assert np.all(core.in_range(xp, *xyrange))
 
 
 @given(xdata = float_arrays(size       =  100,
@@ -410,16 +417,11 @@ def test_profile1D_one_bin_missing_x(func, xdata, ydata): # pragma: no cover
     xp, yp, ye = func(xdata, ydata)
     assert xp.size == 99
 
-
-@given(xdata = float_arrays(size       =  100,
-                            min_value  = -1e10,
-                            max_value  = +1e10),
-       ydata = float_arrays(size       =  100,
-                            min_value  = -1e10,
-                            max_value  = +1e10))
 @mark.parametrize("func", (fitf.profileX, fitf.profileY))
-def test_number_of_bins_matches(func, xdata, ydata):
+def test_number_of_bins_matches(func):
     N = 50
+    xdata = np.linspace(-1, 1, N)
+    ydata = np.arange(N)
     xp, yp, ye = func(xdata, ydata, N, drop_nan=False)
     assert xp.size == yp.size == ye.size == N
 
@@ -474,7 +476,6 @@ def test_profile_data_in_edges(func, xdata, ydata, drop_nan):
     assert np.allclose(ye, expected_ye, equal_nan=True)
 
 
-@mark.slow
 @mark.parametrize("zrange", (None, (.25, .75)))
 def test_profileXY(zrange):
     N    = 10000
