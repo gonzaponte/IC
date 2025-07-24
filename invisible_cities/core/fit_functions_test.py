@@ -42,30 +42,42 @@ def test_get_chi2_and_pvalue_when_data_equals_error_and_fit_equals_zero():
     assert pvalue == approx(0.5, rel=1e-3)
 
 
-def test_get_chi2_and_pvalue_when_data_equals_fit():
-    Nevt  = int(1e6)
-    ydata = np.random.uniform(1, 100, Nevt)
-    yfit  = ydata
-    errs  = ydata**0.5 # Dummy value, not needed
-    chi2, pvalue = fitf.get_chi2_and_pvalue(ydata, yfit, Nevt, errs)
+def test_get_chi2_and_pvalue_perfect_fit():
+    ndof  = 100
+    data  = np.linspace(-10, 10, ndof + 2)
+    model = data
+    sigma = np.ones_like(data) # sigma value irrelevant as long as != 0
 
-    assert chi2   == approx(0., rel=1e-3)
-    assert pvalue == approx(1., rel=1e-3)
+    chi2, pvalue = fitf.get_chi2_and_pvalue(data, model, ndof, sigma)
+    assert np.isclose(  chi2, 0, atol=1e-12)
+    assert np.isclose(pvalue, 1, rtol=1e-12)
 
 
-@flaky(max_runs=5, min_passes=4)
-@given(floats(min_value = -2500,
-              max_value = +2500),
-       floats(min_value = + 100,
-              max_value = + 300))
-@settings(max_examples=100)
+def test_get_chi2_and_pvalue_diff_equals_error():
+    ndof  = 100
+    ndata = ndof + 2
+    data  = np.linspace(-10, 10, ndata)
+    sigma = np.ones_like(data) * np.pi
+    sign  = np.array([1, -1] * (ndata//2))
+    model = data + sigma * sign
+
+    chi2, pvalue = fitf.get_chi2_and_pvalue(data, model, ndof, sigma)
+    assert np.isclose(  chi2, ndata / ndof, rtol=1e-12)
+    assert np.isclose(pvalue, 0.42560514048314035, rtol=1e-12)
+
+
+@given(floats(min_value = -2500, max_value = +2500),
+       floats(min_value = + 100, max_value = + 300))
 def test_get_chi2_and_pvalue_gauss_errors(mean, sigma):
-    Nevt  = int(1e6)
-    ydata = np.random.normal(mean, sigma, Nevt)
+    ndof  = 100
+    ndata = ndof + 1
+    model = np.ones(ndata) * mean
+    t     = np.linspace(-5, 5, ndata)
+    data  = model + sigma * t
 
-    chi2, pvalue = fitf.get_chi2_and_pvalue(ydata, mean, Nevt-1, sigma)
-
-    assert chi2 == approx(1, rel=1e-2)
+    chi2, pvalue = fitf.get_chi2_and_pvalue(data, model, ndata-1, sigma)
+    expected     = np.sum(t**2)/ndof
+    assert np.isclose(chi2, expected, 1e-3)
 
 
 def test_get_chi2_and_pvalue_auto_errors():
@@ -103,18 +115,16 @@ def test_chi2_str_line():
     assert f.chi2 == approx(14, rel=1e-02)
 
 
-@mark.slow
-@flaky(max_runs=10, min_passes=9)
 def test_chi2_poisson_errors():
-    mu    = np.random.uniform(-100, 100)
-    sigma = np.random.uniform(   0, 100)
-    A     =  1e9
+    mu       = 123
+    sigma    = 34
+    integral = 1e6
     x     = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
-    y     = fitf.gauss(x, A, mu, sigma)
+    y     = fitf.gauss(x, integral, mu, sigma)
     y     = np.random.poisson(y)
     errs  = poisson_sigma(y)
 
-    f = fitf.fit(fitf.gauss, x, y, seed=(A, mu, sigma), sigma=errs)
+    f = fitf.fit(fitf.gauss, x, y, seed=(integral, mu, sigma), sigma=errs)
 
     assert 0.60 < f.chi2 < 1.5
 
