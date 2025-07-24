@@ -404,18 +404,6 @@ def test_profile1D_full_range_x(func, xdata, ydata, xrange):
     xp, yp, ye = func(xdata, ydata)
     assert np.all(core.in_range(xp, *xrange))
 
-@mark.skip(reason="Hypothesis can't handle sequences longer than 2**10")
-#@mark.parametrize("func xdata ydata".split(),
-#                  ((fitf.profileX,
-#                    FLOAT_ARRAY(10000, -100, 100),
-#                    FLOAT_ARRAY(10000, -500,   0)),
-#                   (fitf.profileY,
-#                    FLOAT_ARRAY(10000, -100, 100),
-#                    FLOAT_ARRAY(10000, -500,   0))))
-def test_profile1D_one_bin_missing_x(func, xdata, ydata): # pragma: no cover
-    xdata[core.in_range(xdata, -2, 0)] += 5
-    xp, yp, ye = func(xdata, ydata)
-    assert xp.size == 99
 
 @mark.parametrize("func", (fitf.profileX, fitf.profileY))
 def test_number_of_bins_matches(func):
