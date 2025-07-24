@@ -8,6 +8,7 @@ from hypothesis.     extra.pandas import data_frames
 from hypothesis.     extra.pandas import column
 from hypothesis.     extra.pandas import range_indexes
 from . testing_utils              import all_elements_close
+from . testing_utils              import ignore_warning
 from . testing_utils              import assert_tables_equality
 
 
@@ -23,6 +24,7 @@ def test_all_elements_close_rel(mu, t_rel):
     assert all_elements_close(x, t_rel=t_rel, t_abs=0)
 
 
+@ignore_warning.divide_by_zero
 @mark.parametrize("   mu  t_abs".split(),
                   ((   0,  1e-6),
                    ( 123,  1e-1)))
