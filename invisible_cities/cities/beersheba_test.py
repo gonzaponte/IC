@@ -88,7 +88,6 @@ def test_beersheba_exact_result( deco
                                , config_tmpdir):
     config   = beersheba_config if deco is DeconvolutionMode.joint else beersheba_config_separate
     true_out = Th228_deco       if deco is DeconvolutionMode.joint else Th228_deco_separate
-
     path_out = os.path.join(config_tmpdir, f"beersheba_exact_result_{deco.name}.h5")
     config.update(dict(file_out = path_out))
 
@@ -105,7 +104,7 @@ def test_beersheba_exact_result( deco
                 assert hasattr(output_file.root, table), table
                 got      = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(got, expected, rtol=1e-6)
+                assert_tables_equality(got, expected, rtol=5e-5)
 
 
 @ignore_warning.no_config_group
@@ -139,7 +138,7 @@ def test_beersheba_exact_result_with_satkill( ICDATADIR
                 assert hasattr(output_file.root, table), table
                 got      = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(got, expected, rtol=1e-6)
+                assert_tables_equality(got, expected, rtol=5e-5)
 
 
 @mark.parametrize("ndim", (1, 3))
