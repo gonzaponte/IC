@@ -81,7 +81,20 @@ def test_isaura_exact(ICDATADIR, output_tmpdir):
             for table in tables:
                 obtained = getattr(     output_file.root, table)
                 expected = getattr(true_output_file.root, table)
-                assert_tables_equality(obtained, expected)
+                try:
+                    assert_tables_equality(obtained, expected)
+                except:
+                    print(table)
+                    print(obtained.colnames)
+                    for row1, row2 in zip(obtained, expected):
+                        row1 = row1.fetch_all_fields()
+                        row2 = row2.fetch_all_fields()
+                        print("="*50)
+                        cols = obtained.colnames
+                        for i in range(len(cols)):
+                            print(cols[i], row1[i], row2[i])
+                    raise
+
 
 
 @ignore_warning.no_config_group

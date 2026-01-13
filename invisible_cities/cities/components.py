@@ -1550,6 +1550,13 @@ def track_blob_info_creator_extractor(vox_size         : Tuple[float, float, flo
                         hit.track_id = tID
                         track_hits.append(hit)
 
+
+            if hitc.event == 3:
+                print("="*80)
+                print(f"EVENT {hitc.event} nhits {len(track_hits)}")
+                for i, h in enumerate(track_hits):
+                    print(f"Hit {i:>04} at {h.X} {h.Y} {h.Z} with E = {h.E}, {h.Ec}")
+
             #change dtype of columns to match type of variables
             df = df.apply(lambda x : x.astype(types_dict_tracks[x.name]))
             track_hitc.hits.extend(track_hits)
