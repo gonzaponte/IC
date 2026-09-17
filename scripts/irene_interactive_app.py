@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-import glob
-import hashlib
 import os
+import hashlib
 from pathlib import Path
 
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import streamlit as st
 import tables as tb
+import streamlit as st
+
+import plotly.graph_objects as go
+from   plotly.subplots import make_subplots
 
 from invisible_cities.cities.components import build_pmap
 from invisible_cities.cities.components import calibrate_pmts
@@ -17,17 +17,16 @@ from invisible_cities.cities.components import deconv_pmt
 from invisible_cities.cities.components import get_actual_sipm_thr
 from invisible_cities.cities.components import select_cutting_algorithm
 from invisible_cities.cities.components import zero_suppress_wfs
-from invisible_cities.core import system_of_units as units
-from invisible_cities.core.configure import read_config_file
-from invisible_cities.database import load_db
-from invisible_cities.types.symbols import CutAlgo
-from invisible_cities.types.symbols import SiPMThreshold
+from invisible_cities.core              import system_of_units as units
+from invisible_cities.core.configure    import read_config_file
+from invisible_cities.database          import load_db
+from invisible_cities.types.symbols     import CutAlgo
+from invisible_cities.types.symbols     import SiPMThreshold
 
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-os.environ.setdefault("ICTDIR", str(ROOT_DIR))
+ROOT_DIR         = Path(os.environ["ICTDIR"])
 DEFAULT_DATA_DIR = Path("/analysis")
-CONFIG_FILE = ROOT_DIR / "invisible_cities" / "config" / "irene.conf"
+CONFIG_FILE      = ROOT_DIR / "invisible_cities" / "config" / "irene.conf"
 
 CFG = read_config_file(str(CONFIG_FILE)) if CONFIG_FILE.exists() else {}
 
@@ -110,7 +109,8 @@ def write_parameters_to_file(file_path, params):
             return repr(float(value))
         return str(value)
 
-    template = f"""files_in = '{values.get('files_in', DEFAULT_FILE if 'DEFAULT_FILE' in globals() else '$ICDIR/database/test_data/electrons_40keV_z25_RWF.h5')}'
+    template = f"""
+files_in = '{values.get('files_in', globals().get('DEFAULT_FILE', '$ICDIR/database/test_data/electrons_40keV_z25_RWF.h5'))}'
 
 # REPLACE /tmp with your output directory
 file_out = '{values.get('file_out', '/tmp/irene_pmaps.h5')}'
@@ -164,10 +164,10 @@ pmt_samp_wid  = {format_value('pmt_samp_wid', values.get('pmt_samp_wid', 25))} *
 sipm_samp_wid = {format_value('sipm_samp_wid', values.get('sipm_samp_wid', 1))} * mus
 
 cutting_function = {values.get('cutting_function', 'threshold')}
-cutting_params   = dict(  thr_sipm_type = {values.get('thr_sipm_type', 'common')} 
+cutting_params   = dict(  thr_sipm_type = {values.get('thr_sipm_type', 'common')}
                         , thr_sipm      = thr_sipm
                         , thr_sipm_s2   = thr_sipm_s2
-                        , detector_db   = detector_db 
+                        , detector_db   = detector_db
                         , run_number    = run_number)
 """
 
@@ -188,9 +188,9 @@ def discover_run_numbers(data_root: Path):
 
 
 def discover_ldc_files(data_root: Path, run_number: int, ldc: int):
-    pattern = str(data_root / str(run_number) / "hdf5" / "data" / f"ldc{ldc}" / "*.h5")
+    pattern = data_root / str(run_number) / "hdf5" / "data" / f"ldc{ldc}"
     files = []
-    for path in sorted(glob.glob(pattern)):
+    for path in sorted(pattern.glob("*.h5")):
         try:
             with tb.open_file(path, "r") as h5in:
                 if "RD" in h5in.root and "pmtrwf" in h5in.root.RD and "sipmrwf" in h5in.root.RD:
