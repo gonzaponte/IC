@@ -65,7 +65,7 @@ function install_conda {
     fi
 }
 
-CONDA_ENV_TAG=2026-05-21
+CONDA_ENV_TAG=2026-09-12
 CONDA_ENV_NAME=IC-${PYTHON_VERSION}-${CONDA_ENV_TAG}
 
 function make_environment {
@@ -93,6 +93,7 @@ dependencies:
 - numpy        = 2.4.6
 - pandas       = 3.0.3
 - pip          = 26.1.1
+- plotly
 - pyflakes     = 3.4.0
 - pymysql      = 1.2.0
 - pytables     = 3.11.1
@@ -104,6 +105,7 @@ dependencies:
 - seaborn      = 0.13.2
 - setuptools   = 82.0.1
 - sphinx       = 9.1.0
+- streamlit
 - tornado      = 6.5.5
 - pip:
   - pytest-instafail==0.5.0
