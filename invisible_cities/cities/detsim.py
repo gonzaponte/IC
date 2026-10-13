@@ -184,6 +184,8 @@ def detsim( *
     lt_sipm  = LT_SiPM(fname=os.path.expandvars(sipm_psf)     , data_mc_ratio=data_mc_ratio_sipm, sipm_database=datasipm)
     el_gap   = lt_sipm.el_gap_width
 
+    subtract_global_time = fl.map(lambda t: t - t.min(), item="time")
+
     filter_delayed_hits = fl.map(filter_hits_after_max_time(buffer_params_["max_time"]),
                                  args = ('x', 'y', 'z', 'energy', 'time', 'label', 'event_number'),
                                  out  = ('x', 'y', 'z', 'energy', 'time', 'label'))
@@ -265,6 +267,7 @@ def detsim( *
                          pipe  = fl.pipe( fl.slice(*event_range, close_all=True)
                                         , event_count_in.spy
                                         , print_every(print_mod)
+                                        , subtract_global_time
                                         , filter_delayed_hits
                                         , select_s1_candidate_hits
                                         , select_active_hits
